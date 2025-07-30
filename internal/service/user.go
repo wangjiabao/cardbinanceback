@@ -40,7 +40,9 @@ func (u *UserService) OpenCardHandle(ctx context.Context, req *pb.OpenCardHandle
 		}
 
 		err = u.uuc.OpenCardHandle(ctx)
-		fmt.Println(err)
+		if nil != err {
+			fmt.Println(err)
+		}
 		time.Sleep(10 * time.Second)
 	}
 

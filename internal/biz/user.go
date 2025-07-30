@@ -172,7 +172,6 @@ func (uuc *UserUseCase) OpenCardHandle(ctx context.Context) error {
 	}
 
 	if 0 >= len(userOpenCard) {
-		fmt.Println("无数据")
 		return nil
 	}
 
