@@ -25,6 +25,7 @@ type User struct {
 	AmountTwo     uint64    `gorm:"type:bigint"`
 	FirstName     string    `gorm:"type:varchar(45);not null;default:'no'"`
 	LastName      string    `gorm:"type:varchar(45);not null;default:'no'"`
+	BirthDate     string    `gorm:"type:varchar(45);not null;default:'no'"`
 	Email         string    `gorm:"type:varchar(100);not null;default:'no'"`
 	CountryCode   string    `gorm:"type:varchar(45);not null;default:'no'"`
 	Phone         string    `gorm:"type:varchar(45);not null;default:'no'"`
@@ -73,6 +74,17 @@ type Withdraw struct {
 	Address   string    `gorm:"type:varchar(45);not null"`
 	CreatedAt time.Time `gorm:"type:datetime;not null"`
 	UpdatedAt time.Time `gorm:"type:datetime;not null"`
+}
+
+type EthUserRecord struct {
+	ID        int64     `gorm:"primarykey;type:int"`
+	Hash      string    `gorm:"type:varchar(100);not null"`
+	UserId    int64     `gorm:"type:int;not null"`
+	Amount    string    `gorm:"type:varchar(45);not null"`
+	AmountTwo uint64    `gorm:"type:int;not null"`
+	CreatedAt time.Time `gorm:"type:datetime;not null"`
+	UpdatedAt time.Time `gorm:"type:datetime;not null"`
+	Last      int64     `gorm:"type:int;not null"`
 }
 
 type UserRepo struct {
@@ -378,6 +390,7 @@ func (u *UserRepo) CreateCard(ctx context.Context, userId uint64, user *biz.User
 			"card_order_id": "do",
 			"first_name":    user.FirstName,
 			"last_name":     user.LastName,
+			"birth_date":    user.BirthDate,
 			"email":         user.Email,
 			"phone":         user.Phone,
 			"country_code":  user.CountryCode,
@@ -422,7 +435,7 @@ func (u *UserRepo) SetVip(ctx context.Context, userId uint64, vip uint64) error 
 
 // UpdateCard .
 func (u *UserRepo) UpdateCard(ctx context.Context, userId uint64, cardOrderId, card string) error {
-	res := u.data.DB(ctx).Table("user").Where("id=?", userId).Where("card_order_id=?", "no").
+	res := u.data.DB(ctx).Table("user").Where("id=?", userId).Where("card_order_id=?", "do").
 		Updates(map[string]interface{}{
 			"card_order_id": cardOrderId,
 			"card":          card,
@@ -467,6 +480,29 @@ func (u *UserRepo) GetAllUsers() ([]*biz.User, error) {
 	return res, nil
 }
 
+// GetUserRecommends .
+func (u *UserRepo) GetUserRecommends() ([]*biz.UserRecommend, error) {
+	var userRecommends []*UserRecommend
+	res := make([]*biz.UserRecommend, 0)
+	if err := u.data.db.Table("user_recommend").Find(&userRecommends).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return res, errors.NotFound("USER_RECOMMEND_NOT_FOUND", "user recommend not found")
+		}
+
+		return nil, errors.New(500, "USER RECOMMEND ERROR", err.Error())
+	}
+
+	for _, userRecommend := range userRecommends {
+		res = append(res, &biz.UserRecommend{
+			ID:            userRecommend.ID,
+			UserId:        userRecommend.UserId,
+			RecommendCode: userRecommend.RecommendCode,
+		})
+	}
+
+	return res, nil
+}
+
 // GetUsersOpenCard .
 func (u *UserRepo) GetUsersOpenCard() ([]*biz.User, error) {
 	var users []*User
@@ -497,11 +533,12 @@ func (u *UserRepo) GetUsersOpenCard() ([]*biz.User, error) {
 			CardOrderId:   user.CardOrderId,
 			FirstName:     user.FirstName,
 			LastName:      user.LastName,
+			BirthDate:     user.BirthDate,
 			Email:         user.Email,
 			CountryCode:   user.CountryCode,
 			Phone:         user.Phone,
 			City:          user.City,
-			Country:       user.Email,
+			Country:       user.Country,
 			Street:        user.Street,
 			PostalCode:    user.PostalCode,
 		})
@@ -648,4 +685,95 @@ func (u *UserRepo) GetUserRewardByUserIdPage(ctx context.Context, b *biz.Paginat
 	}
 
 	return res, nil, count
+}
+
+func (u *UserRepo) GetEthUserRecordLast() (int64, error) {
+	var ethUserRecord *EthUserRecord
+	if err := u.data.db.Table("eth_user_record").Order("last desc").First(&ethUserRecord).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return 0, nil
+		}
+
+		return -1, errors.New(500, "USER RECOMMEND ERROR", err.Error())
+	}
+
+	return ethUserRecord.Last, nil
+}
+
+// GetUserByAddresses .
+func (u *UserRepo) GetUserByAddresses(addresses ...string) (map[string]*biz.User, error) {
+	var users []*User
+	if err := u.data.db.Table("user").Where("address IN (?)", addresses).Find(&users).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.NotFound("USER_NOT_FOUND", "user not found")
+		}
+
+		return nil, errors.New(500, "USER ERROR", err.Error())
+	}
+
+	res := make(map[string]*biz.User, 0)
+	for _, item := range users {
+		res[item.Address] = &biz.User{
+			ID:      item.ID,
+			Address: item.Address,
+		}
+	}
+	return res, nil
+}
+
+func (u *UserRepo) CreateEthUserRecordListByHash(ctx context.Context, r *biz.EthUserRecord) (*biz.EthUserRecord, error) {
+	res := u.data.DB(ctx).Table("user").Where("id=?", r.UserId).
+		Updates(map[string]interface{}{
+			"amount":     gorm.Expr("amount + ?", float64(r.AmountTwo)),
+			"amount_two": gorm.Expr("amount_two + ?", r.AmountTwo),
+			"updated_at": time.Now().Format("2006-01-02 15:04:05"),
+		})
+	if res.Error != nil || 0 >= res.RowsAffected {
+		return nil, errors.New(500, "UPDATE_USER_ERROR", "用户信息修改失败")
+	}
+	var (
+		reward Reward
+	)
+	reward.UserId = uint64(r.UserId)
+	reward.Amount = float64(r.AmountTwo)
+	reward.Reason = 1 // 给我分红的理由
+	resInsert := u.data.DB(ctx).Table("reward").Create(&reward)
+	if resInsert.Error != nil || 0 >= resInsert.RowsAffected {
+		return nil, errors.New(500, "CREATE_LOCATION_ERROR", "信息创建失败")
+	}
+
+	var ethUserRecord EthUserRecord
+	ethUserRecord.UserId = r.UserId
+	ethUserRecord.Hash = r.Hash
+	ethUserRecord.Amount = r.Amount
+	ethUserRecord.AmountTwo = r.AmountTwo
+	ethUserRecord.Last = r.Last
+
+	resTwo := u.data.DB(ctx).Table("eth_user_record").Create(&ethUserRecord)
+	if resTwo.Error != nil || 0 >= resTwo.RowsAffected {
+		return nil, errors.New(500, "CREATE_ETH_USER_RECORD_ERROR", "以太坊交易信息创建失败")
+	}
+
+	return &biz.EthUserRecord{
+		ID:        ethUserRecord.ID,
+		UserId:    ethUserRecord.UserId,
+		Hash:      ethUserRecord.Hash,
+		Amount:    ethUserRecord.Amount,
+		AmountTwo: ethUserRecord.AmountTwo,
+		Last:      ethUserRecord.Last,
+	}, nil
+}
+
+// UpdateUserMyTotalAmountAdd .
+func (u *UserRepo) UpdateUserMyTotalAmountAdd(ctx context.Context, userId uint64, amount uint64) error {
+	res := u.data.DB(ctx).Table("user").Where("id=?", userId).
+		Updates(map[string]interface{}{
+			"my_total_amount": gorm.Expr("my_total_amount + ?", amount),
+			"updated_at":      time.Now().Format("2006-01-02 15:04:05"),
+		})
+	if res.Error != nil || 0 >= res.RowsAffected {
+		return errors.New(500, "UPDATE_USER_ERROR", "用户信息修改失败")
+	}
+
+	return nil
 }
