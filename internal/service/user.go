@@ -33,7 +33,7 @@ func (u *UserService) OpenCardHandle(ctx context.Context, req *pb.OpenCardHandle
 	var (
 		err error
 	)
-	for i := 1; i <= 28; i++ {
+	for i := 1; i <= 10; i++ {
 		now := time.Now().UTC()
 		if end.Before(now) {
 			break
@@ -43,7 +43,7 @@ func (u *UserService) OpenCardHandle(ctx context.Context, req *pb.OpenCardHandle
 		if nil != err {
 			fmt.Println(err)
 		}
-		time.Sleep(10 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
 
 	return nil, nil
