@@ -23,7 +23,7 @@ type User struct {
 	Vip           uint64    `gorm:"type:int"`
 	MyTotalAmount uint64    `gorm:"type:bigint"`
 	AmountTwo     uint64    `gorm:"type:bigint"`
-	CardUserId    string    `gorm:"type:varchar(45);not null;default:'no'"`
+	CardUserId    string    `gorm:"type:varchar(45);not null;default:'0'"`
 	FirstName     string    `gorm:"type:varchar(45);not null;default:'no'"`
 	LastName      string    `gorm:"type:varchar(45);not null;default:'no'"`
 	BirthDate     string    `gorm:"type:varchar(45);not null;default:'no'"`
