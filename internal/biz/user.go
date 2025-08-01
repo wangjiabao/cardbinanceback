@@ -468,6 +468,7 @@ func CreateCardRequestWithSign(cardAmount uint64, cardholderId uint64, cardProdu
 	jsonData, _ := json.Marshal(reqBody)
 	req, _ := http.NewRequest("POST", baseUrl, bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Language", "zh_CN")
 
 	//fmt.Println("请求报文:", string(jsonData))
 
