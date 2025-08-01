@@ -23,6 +23,7 @@ type User struct {
 	Vip           uint64    `gorm:"type:int"`
 	MyTotalAmount uint64    `gorm:"type:bigint"`
 	AmountTwo     uint64    `gorm:"type:bigint"`
+	CardUserId    string    `gorm:"type:varchar(45);not null;default:'no'"`
 	FirstName     string    `gorm:"type:varchar(45);not null;default:'no'"`
 	LastName      string    `gorm:"type:varchar(45);not null;default:'no'"`
 	BirthDate     string    `gorm:"type:varchar(45);not null;default:'no'"`
@@ -33,6 +34,8 @@ type User struct {
 	Country       string    `gorm:"type:varchar(100);not null;default:'no'"`
 	Street        string    `gorm:"type:varchar(100);not null;default:'no'"`
 	PostalCode    string    `gorm:"type:varchar(45);not null;default:'no'"`
+	MaxCardQuota  uint64    `gorm:"type:bigint"`
+	ProductId     string    `gorm:"type:varchar(45);not null;default:'0'"`
 	CreatedAt     time.Time `gorm:"type:datetime;not null"`
 	UpdatedAt     time.Time `gorm:"type:datetime;not null"`
 }
@@ -448,6 +451,20 @@ func (u *UserRepo) UpdateCard(ctx context.Context, userId uint64, cardOrderId, c
 	return nil
 }
 
+// UpdateCardNo .
+func (u *UserRepo) UpdateCardNo(ctx context.Context, userId uint64) error {
+	res := u.data.DB(ctx).Table("user").Where("id=?", userId).
+		Updates(map[string]interface{}{
+			"card_order_id": "no",
+			"updated_at":    time.Now().Format("2006-01-02 15:04:05"),
+		})
+	if res.Error != nil || 0 >= res.RowsAffected {
+		return errors.New(500, "UPDATE_USER_ERROR", "用户信息修改失败")
+	}
+
+	return nil
+}
+
 // GetAllUsers .
 func (u *UserRepo) GetAllUsers() ([]*biz.User, error) {
 	var users []*User
@@ -541,6 +558,9 @@ func (u *UserRepo) GetUsersOpenCard() ([]*biz.User, error) {
 			Country:       user.Country,
 			Street:        user.Street,
 			PostalCode:    user.PostalCode,
+			CardUserId:    user.CardUserId,
+			MaxCardQuota:  user.MaxCardQuota,
+			ProductId:     user.ProductId,
 		})
 	}
 	return res, nil

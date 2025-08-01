@@ -41,6 +41,9 @@ type User struct {
 	Country       string
 	Street        string
 	PostalCode    string
+	CardUserId    string
+	ProductId     string
+	MaxCardQuota  uint64
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }
@@ -107,6 +110,7 @@ type UserRepo interface {
 	CreateCard(ctx context.Context, userId uint64, user *User) error
 	GetAllUsers() ([]*User, error)
 	UpdateCard(ctx context.Context, userId uint64, cardOrderId, card string) error
+	UpdateCardNo(ctx context.Context, userId uint64) error
 	CreateCardRecommend(ctx context.Context, userId uint64, amount float64, vip uint64, address string) error
 	AmountTo(ctx context.Context, userId, toUserId uint64, toAddress string, amount float64) error
 	Withdraw(ctx context.Context, userId uint64, amount, amountRel float64, address string) error
@@ -175,71 +179,112 @@ func (uuc *UserUseCase) OpenCardHandle(ctx context.Context) error {
 		return nil
 	}
 
-	var (
-		products          *CardProductListResponse
-		productIdUse      string
-		productIdUseInt64 uint64
-		maxCardQuota      int
-	)
-	products, err = GetCardProducts()
-	if nil == products || nil != err {
-		fmt.Println("产品信息错误1")
-		return nil
-	}
-
-	for _, v := range products.Rows {
-		if 0 < len(v.ProductId) && "ENABLED" == v.ProductStatus {
-			productIdUse = v.ProductId
-			maxCardQuota = v.MaxCardQuota
-			productIdUseInt64, err = strconv.ParseUint(productIdUse, 10, 64)
-			if nil != err {
-				fmt.Println("产品信息错误2")
-				return nil
-			}
-			fmt.Println("当前选择产品信息", productIdUse, maxCardQuota, v)
-			break
-		}
-	}
-
-	if 0 >= maxCardQuota {
-		fmt.Println("产品信息错误3")
-		return nil
-	}
-
-	if 0 >= productIdUseInt64 {
-		fmt.Println("产品信息错误4")
-		return nil
-	}
+	//var (
+	//	products          *CardProductListResponse
+	//	productIdUse      string
+	//	productIdUseInt64 uint64
+	//	maxCardQuota      int
+	//)
+	//products, err = GetCardProducts()
+	//if nil == products || nil != err {
+	//	fmt.Println("产品信息错误1")
+	//	return nil
+	//}
+	//
+	//for _, v := range products.Rows {
+	//	if 0 < len(v.ProductId) && "ENABLED" == v.ProductStatus {
+	//		productIdUse = v.ProductId
+	//		maxCardQuota = v.MaxCardQuota
+	//		productIdUseInt64, err = strconv.ParseUint(productIdUse, 10, 64)
+	//		if nil != err {
+	//			fmt.Println("产品信息错误2")
+	//			return nil
+	//		}
+	//		fmt.Println("当前选择产品信息", productIdUse, maxCardQuota, v)
+	//		break
+	//	}
+	//}
+	//
+	//if 0 >= maxCardQuota {
+	//	fmt.Println("产品信息错误3")
+	//	return nil
+	//}
+	//
+	//if 0 >= productIdUseInt64 {
+	//	fmt.Println("产品信息错误4")
+	//	return nil
+	//}
 
 	for _, user := range userOpenCard {
-		var (
-			resCreatCardholder *CreateCardholderResponse
-		)
-		resCreatCardholder, err = CreateCardholderRequest(productIdUseInt64, user)
-		if nil == resCreatCardholder || 200 != resCreatCardholder.Code || err != nil {
-			fmt.Println("持卡人订单创建失败", user, resCreatCardholder, err)
-			continue
-		}
-		if 0 > len(resCreatCardholder.Data.HolderID) {
-			fmt.Println("持卡人订单信息错误", user, resCreatCardholder, err)
-			continue
-		}
-		fmt.Println("持卡人信息", user, resCreatCardholder)
+		//var (
+		//	resCreatCardholder *CreateCardholderResponse
+		//)
+		//resCreatCardholder, err = CreateCardholderRequest(productIdUseInt64, user)
+		//if nil == resCreatCardholder || 200 != resCreatCardholder.Code || err != nil {
+		//	fmt.Println("持卡人订单创建失败", user, resCreatCardholder, err)
+		//	continue
+		//}
+		//if 0 > len(resCreatCardholder.Data.HolderID) {
+		//	fmt.Println("持卡人订单信息错误", user, resCreatCardholder, err)
+		//	continue
+		//}
+		//fmt.Println("持卡人信息", user, resCreatCardholder)
+		//
 
 		var (
-			holderId     uint64
-			resCreatCard *CreateCardResponse
+			holderId          uint64
+			productIdUseInt64 uint64
+			resCreatCard      *CreateCardResponse
+			openRes           = true
 		)
-		holderId, err = strconv.ParseUint(resCreatCardholder.Data.HolderID, 10, 64)
+		if 5 > len(user.CardUserId) {
+			fmt.Println("持卡人id空", user)
+			openRes = false
+		}
+		holderId, err = strconv.ParseUint(user.CardUserId, 10, 64)
 		if nil != err {
 			fmt.Println("持卡人错误2")
-			continue
+			openRes = false
 		}
 		if 0 >= holderId {
 			fmt.Println("持卡人错误3")
+			openRes = false
+		}
+		if 5 > len(user.CardUserId) {
+			fmt.Println("持卡人id空", user)
+			openRes = false
 		}
 
-		resCreatCard, err = CreateCardRequestWithSign(maxCardQuota, holderId, productIdUseInt64)
+		if 0 >= user.MaxCardQuota {
+			fmt.Println("最大额度错误", user)
+			openRes = false
+		}
+
+		if 5 > len(user.ProductId) {
+			fmt.Println("productid空", user)
+			openRes = false
+		}
+		productIdUseInt64, err = strconv.ParseUint(user.ProductId, 10, 64)
+		if nil != err {
+			fmt.Println("产品信息错误1")
+			openRes = false
+		}
+		if 0 >= productIdUseInt64 {
+			fmt.Println("产品信息错误2")
+			openRes = false
+		}
+
+		if !openRes {
+			fmt.Println("回滚了用户", user)
+			err = uuc.backCard(ctx, user.ID)
+			if nil != err {
+				fmt.Println("回滚了用户失败", err)
+			}
+
+			continue
+		}
+
+		resCreatCard, err = CreateCardRequestWithSign(user.MaxCardQuota, holderId, productIdUseInt64)
 		if nil == resCreatCard || 200 != resCreatCard.Code || err != nil {
 			fmt.Println("开卡订单创建失败", user, resCreatCard, err)
 			continue
@@ -320,6 +365,25 @@ func (uuc *UserUseCase) OpenCardHandle(ctx context.Context) error {
 	return nil
 }
 
+func (uuc *UserUseCase) backCard(ctx context.Context, userId uint64) error {
+	var (
+		err error
+	)
+	if err = uuc.tx.ExecTx(ctx, func(ctx context.Context) error { // 事务
+		err = uuc.repo.UpdateCardNo(ctx, userId)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}); nil != err {
+		fmt.Println("err")
+		return err
+	}
+
+	return nil
+}
+
 func GenerateSign(params map[string]interface{}, signKey string) string {
 	// 1. 排除 sign 字段
 	var keys []string
@@ -376,7 +440,7 @@ type CreateCardResponse struct {
 	} `json:"data"`
 }
 
-func CreateCardRequestWithSign(cardAmount int, cardholderId uint64, cardProductId uint64) (*CreateCardResponse, error) {
+func CreateCardRequestWithSign(cardAmount uint64, cardholderId uint64, cardProductId uint64) (*CreateCardResponse, error) {
 	//url := "https://test-api.ispay.com/dev-api/vcc/api/v1/cards/create"
 	//url := "https://www.ispay.com/prod-api/vcc/api/v1/cards/create"
 	baseUrl := "http://120.79.173.55:9102/prod-api/vcc/api/v1/cards/create"
