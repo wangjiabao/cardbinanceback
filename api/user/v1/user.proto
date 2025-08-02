@@ -16,6 +16,12 @@ service User {
 		};
 	};
 
+	rpc CardStatusHandle (CardStatusHandleRequest) returns (CardStatusHandleReply) {
+		option (google.api.http) = {
+			get: "/api/admin_dhb/card_status_handle"
+		};
+	};
+
 	rpc Deposit (DepositRequest) returns (DepositReply) {
 		option (google.api.http) = {
 			get: "/api/admin_dhb/deposit"
@@ -23,11 +29,18 @@ service User {
 	};
 
 }
-
 message OpenCardHandleRequest {
 }
 
 message OpenCardHandleReply {
+	string status = 1;
+}
+
+
+message CardStatusHandleRequest {
+}
+
+message CardStatusHandleReply {
 	string status = 1;
 }
 

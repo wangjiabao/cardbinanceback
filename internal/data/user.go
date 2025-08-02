@@ -456,7 +456,23 @@ func (u *UserRepo) UpdateCardNo(ctx context.Context, userId uint64) error {
 	res := u.data.DB(ctx).Table("user").Where("id=?", userId).
 		Updates(map[string]interface{}{
 			"card_order_id": "no",
+			"card":          "no",
+			"amount":        gorm.Expr("amount + ?", 10),
 			"updated_at":    time.Now().Format("2006-01-02 15:04:05"),
+		})
+	if res.Error != nil || 0 >= res.RowsAffected {
+		return errors.New(500, "UPDATE_USER_ERROR", "用户信息修改失败")
+	}
+
+	return nil
+}
+
+// UpdateCardSuccess .
+func (u *UserRepo) UpdateCardSucces(ctx context.Context, userId uint64, cardNum string) error {
+	res := u.data.DB(ctx).Table("user").Where("id=?", userId).
+		Updates(map[string]interface{}{
+			"card_number": cardNum,
+			"updated_at":  time.Now().Format("2006-01-02 15:04:05"),
 		})
 	if res.Error != nil || 0 >= res.RowsAffected {
 		return errors.New(500, "UPDATE_USER_ERROR", "用户信息修改失败")
@@ -526,6 +542,52 @@ func (u *UserRepo) GetUsersOpenCard() ([]*biz.User, error) {
 
 	res := make([]*biz.User, 0)
 	if err := u.data.db.Table("user").Where("card_order_id=?", "do").Order("id asc").Find(&users).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return res, nil
+		}
+
+		return nil, errors.New(500, "USER ERROR", err.Error())
+	}
+
+	for _, user := range users {
+		res = append(res, &biz.User{
+			CardAmount:    user.CardAmount,
+			MyTotalAmount: user.MyTotalAmount,
+			AmountTwo:     user.AmountTwo,
+			IsDelete:      user.IsDelete,
+			Vip:           user.Vip,
+			ID:            user.ID,
+			Address:       user.Address,
+			Card:          user.Card,
+			Amount:        user.Amount,
+			CreatedAt:     user.CreatedAt,
+			UpdatedAt:     user.UpdatedAt,
+			CardNumber:    user.CardNumber,
+			CardOrderId:   user.CardOrderId,
+			FirstName:     user.FirstName,
+			LastName:      user.LastName,
+			BirthDate:     user.BirthDate,
+			Email:         user.Email,
+			CountryCode:   user.CountryCode,
+			Phone:         user.Phone,
+			City:          user.City,
+			Country:       user.Country,
+			Street:        user.Street,
+			PostalCode:    user.PostalCode,
+			CardUserId:    user.CardUserId,
+			MaxCardQuota:  user.MaxCardQuota,
+			ProductId:     user.ProductId,
+		})
+	}
+	return res, nil
+}
+
+// GetUsersOpenCardStatusDoing .
+func (u *UserRepo) GetUsersOpenCardStatusDoing() ([]*biz.User, error) {
+	var users []*User
+
+	res := make([]*biz.User, 0)
+	if err := u.data.db.Table("user").Where("card!=?", "no").Where("card_number=?", "no").Order("id asc").Find(&users).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return res, nil
 		}

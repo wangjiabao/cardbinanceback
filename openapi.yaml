@@ -6,6 +6,24 @@ info:
     title: User API
     version: 0.0.1
 paths:
+    /api/admin_dhb/card_status_handle:
+        get:
+            tags:
+                - User
+            operationId: User_CardStatusHandle
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/CardStatusHandleReply'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
     /api/admin_dhb/deposit:
         get:
             tags:
@@ -45,6 +63,11 @@ paths:
                                 $ref: '#/components/schemas/Status'
 components:
     schemas:
+        CardStatusHandleReply:
+            type: object
+            properties:
+                status:
+                    type: string
         DepositReply:
             type: object
             properties:

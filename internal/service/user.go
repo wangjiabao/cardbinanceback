@@ -49,6 +49,27 @@ func (u *UserService) OpenCardHandle(ctx context.Context, req *pb.OpenCardHandle
 	return nil, nil
 }
 
+func (u *UserService) CardStatusHandle(ctx context.Context, req *pb.CardStatusHandleRequest) (*pb.CardStatusHandleReply, error) {
+	end := time.Now().UTC().Add(50 * time.Second)
+
+	var (
+		err error
+	)
+	for i := 1; i <= 10; i++ {
+		now := time.Now().UTC()
+		if end.Before(now) {
+			break
+		}
+
+		err = u.uuc.CardStatusHandle(ctx)
+		if nil != err {
+			fmt.Println(err)
+		}
+		time.Sleep(5 * time.Second)
+	}
+
+	return nil, nil
+}
 func (u *UserService) Deposit(ctx context.Context, req *pb.DepositRequest) (*pb.DepositReply, error) {
 	end := time.Now().UTC().Add(50 * time.Second)
 

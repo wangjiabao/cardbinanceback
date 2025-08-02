@@ -111,12 +111,14 @@ type UserRepo interface {
 	GetAllUsers() ([]*User, error)
 	UpdateCard(ctx context.Context, userId uint64, cardOrderId, card string) error
 	UpdateCardNo(ctx context.Context, userId uint64) error
+	UpdateCardSucces(ctx context.Context, userId uint64, cardNum string) error
 	CreateCardRecommend(ctx context.Context, userId uint64, amount float64, vip uint64, address string) error
 	AmountTo(ctx context.Context, userId, toUserId uint64, toAddress string, amount float64) error
 	Withdraw(ctx context.Context, userId uint64, amount, amountRel float64, address string) error
 	GetUserRewardByUserIdPage(ctx context.Context, b *Pagination, userId uint64, reason uint64) ([]*Reward, error, int64)
 	SetVip(ctx context.Context, userId uint64, vip uint64) error
 	GetUsersOpenCard() ([]*User, error)
+	GetUsersOpenCardStatusDoing() ([]*User, error)
 	GetEthUserRecordLast() (int64, error)
 	GetUserByAddresses(Addresses ...string) (map[string]*User, error)
 	GetUserRecommends() ([]*UserRecommend, error)
@@ -144,6 +146,79 @@ type Pagination struct {
 }
 
 // 后台
+
+func (uuc *UserUseCase) GetEthUserRecordLast() (int64, error) {
+	return uuc.repo.GetEthUserRecordLast()
+}
+func (uuc *UserUseCase) GetUserByAddress(Addresses ...string) (map[string]*User, error) {
+	return uuc.repo.GetUserByAddresses(Addresses...)
+}
+
+func (uuc *UserUseCase) DepositNew(ctx context.Context, userId uint64, amount uint64, eth *EthUserRecord, system bool) error {
+	// 推荐人
+	var (
+		err error
+	)
+
+	// 入金
+	if err = uuc.tx.ExecTx(ctx, func(ctx context.Context) error { // 事务
+		// 充值记录
+		if !system {
+			_, err = uuc.repo.CreateEthUserRecordListByHash(ctx, &EthUserRecord{
+				Hash:      eth.Hash,
+				UserId:    eth.UserId,
+				Amount:    eth.Amount,
+				AmountTwo: amount,
+				Last:      eth.Last,
+			})
+			if nil != err {
+				return err
+			}
+		}
+
+		return nil
+	}); nil != err {
+		fmt.Println(err, "错误投资3", userId, amount)
+		return err
+	}
+
+	// 推荐人
+	var (
+		userRecommend       *UserRecommend
+		tmpRecommendUserIds []string
+	)
+	userRecommend, err = uuc.repo.GetUserRecommendByUserId(userId)
+	if nil != err {
+		return err
+	}
+	if "" != userRecommend.RecommendCode {
+		tmpRecommendUserIds = strings.Split(userRecommend.RecommendCode, "D")
+	}
+
+	totalTmp := len(tmpRecommendUserIds) - 1
+	for i := totalTmp; i >= 0; i-- {
+		tmpUserId, _ := strconv.ParseUint(tmpRecommendUserIds[i], 10, 64) // 最后一位是直推人
+		if 0 >= tmpUserId {
+			continue
+		}
+
+		// 增加业绩
+		if err = uuc.tx.ExecTx(ctx, func(ctx context.Context) error { // 事务
+			err = uuc.repo.UpdateUserMyTotalAmountAdd(ctx, tmpUserId, amount)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		}); nil != err {
+			fmt.Println("遍历业绩：", err, tmpUserId, eth)
+			continue
+		}
+	}
+
+	return nil
+}
+
 var lockHandle sync.Mutex
 
 func (uuc *UserUseCase) OpenCardHandle(ctx context.Context) error {
@@ -158,21 +233,6 @@ func (uuc *UserUseCase) OpenCardHandle(ctx context.Context) error {
 	userOpenCard, err = uuc.repo.GetUsersOpenCard()
 	if nil != err {
 		return err
-	}
-
-	var (
-		users    []*User
-		usersMap map[uint64]*User
-	)
-	users, err = uuc.repo.GetAllUsers()
-	if nil == users {
-		fmt.Println("用户无")
-		return nil
-	}
-
-	usersMap = make(map[uint64]*User, 0)
-	for _, vUsers := range users {
-		usersMap[vUsers.ID] = vUsers
 	}
 
 	if 0 >= len(userOpenCard) {
@@ -278,21 +338,29 @@ func (uuc *UserUseCase) OpenCardHandle(ctx context.Context) error {
 			fmt.Println("回滚了用户", user)
 			err = uuc.backCard(ctx, user.ID)
 			if nil != err {
-				fmt.Println("回滚了用户失败", err)
+				fmt.Println("回滚了用户失败", user, err)
 			}
 
 			continue
 		}
 
-		resCreatCard, err = CreateCardRequestWithSign(user.MaxCardQuota, holderId, productIdUseInt64)
+		resCreatCard, err = CreateCardRequestWithSign(0, holderId, productIdUseInt64)
 		if nil == resCreatCard || 200 != resCreatCard.Code || err != nil {
 			fmt.Println("开卡订单创建失败", user, resCreatCard, err)
+			err = uuc.backCard(ctx, user.ID)
+			if nil != err {
+				fmt.Println("回滚了用户失败", user, err)
+			}
 			continue
 		}
 		fmt.Println("开卡信息：", user, resCreatCard)
 
 		if 0 > len(resCreatCard.Data.CardID) || 0 > len(resCreatCard.Data.CardOrderID) {
 			fmt.Println("开卡订单信息错误", resCreatCard, err)
+			err = uuc.backCard(ctx, user.ID)
+			if nil != err {
+				fmt.Println("回滚了用户失败", user, err)
+			}
 			continue
 		}
 
@@ -307,6 +375,81 @@ func (uuc *UserUseCase) OpenCardHandle(ctx context.Context) error {
 			fmt.Println(err, "开卡后，写入mysql错误", err, user, resCreatCard)
 			return nil
 		}
+	}
+
+	return nil
+}
+
+var cardStatusLockHandle sync.Mutex
+
+func (uuc *UserUseCase) CardStatusHandle(ctx context.Context) error {
+	cardStatusLockHandle.Lock()
+	defer cardStatusLockHandle.Unlock()
+
+	var (
+		userOpenCard []*User
+		err          error
+	)
+
+	userOpenCard, err = uuc.repo.GetUsersOpenCardStatusDoing()
+	if nil != err {
+		return err
+	}
+
+	var (
+		users    []*User
+		usersMap map[uint64]*User
+	)
+	users, err = uuc.repo.GetAllUsers()
+	if nil == users {
+		fmt.Println("用户无")
+		return nil
+	}
+
+	usersMap = make(map[uint64]*User, 0)
+	for _, vUsers := range users {
+		usersMap[vUsers.ID] = vUsers
+	}
+
+	if 0 >= len(userOpenCard) {
+		return nil
+	}
+
+	for _, user := range userOpenCard {
+		// 查询状态。成功分红
+		var (
+			resCard *CardInfoResponse
+		)
+		resCard, err = GetCardInfoRequestWithSign(user.Card)
+		if nil == resCard || 200 != resCard.Code || err != nil {
+			fmt.Println(resCard, err)
+			continue
+		}
+
+		if "ACTIVE" == resCard.Data.CardStatus {
+			fmt.Println("开卡状态，激活：", resCard)
+			if err = uuc.tx.ExecTx(ctx, func(ctx context.Context) error { // 事务
+				err = uuc.repo.UpdateCardSucces(ctx, user.ID, resCard.Data.Pan)
+				if err != nil {
+					return err
+				}
+
+				return nil
+			}); nil != err {
+				fmt.Println("err，开卡成功", err)
+				continue
+			}
+		} else if "PENDING" == resCard.Data.CardStatus {
+			fmt.Println("开卡状态，待处理：", resCard)
+			continue
+		} else {
+			fmt.Println("开卡状态，失败：", resCard)
+			err = uuc.backCard(ctx, user.ID)
+			if nil != err {
+				fmt.Println("回滚了用户失败", user, err)
+			}
+			continue
+		}
 
 		// 分红
 		var (
@@ -316,7 +459,7 @@ func (uuc *UserUseCase) OpenCardHandle(ctx context.Context) error {
 		// 推荐
 		userRecommend, err = uuc.repo.GetUserRecommendByUserId(user.ID)
 		if nil == userRecommend {
-			fmt.Println(err, "信息错误", err, user, resCreatCard)
+			fmt.Println(err, "信息错误", err, user)
 			return nil
 		}
 		if "" != userRecommend.RecommendCode {
@@ -500,78 +643,6 @@ func CreateCardRequestWithSign(cardAmount uint64, cardholderId uint64, cardProdu
 	return &result, nil
 }
 
-func (uuc *UserUseCase) GetEthUserRecordLast() (int64, error) {
-	return uuc.repo.GetEthUserRecordLast()
-}
-func (uuc *UserUseCase) GetUserByAddress(Addresses ...string) (map[string]*User, error) {
-	return uuc.repo.GetUserByAddresses(Addresses...)
-}
-
-func (uuc *UserUseCase) DepositNew(ctx context.Context, userId uint64, amount uint64, eth *EthUserRecord, system bool) error {
-	// 推荐人
-	var (
-		err error
-	)
-
-	// 入金
-	if err = uuc.tx.ExecTx(ctx, func(ctx context.Context) error { // 事务
-		// 充值记录
-		if !system {
-			_, err = uuc.repo.CreateEthUserRecordListByHash(ctx, &EthUserRecord{
-				Hash:      eth.Hash,
-				UserId:    eth.UserId,
-				Amount:    eth.Amount,
-				AmountTwo: amount,
-				Last:      eth.Last,
-			})
-			if nil != err {
-				return err
-			}
-		}
-
-		return nil
-	}); nil != err {
-		fmt.Println(err, "错误投资3", userId, amount)
-		return err
-	}
-
-	// 推荐人
-	var (
-		userRecommend       *UserRecommend
-		tmpRecommendUserIds []string
-	)
-	userRecommend, err = uuc.repo.GetUserRecommendByUserId(userId)
-	if nil != err {
-		return err
-	}
-	if "" != userRecommend.RecommendCode {
-		tmpRecommendUserIds = strings.Split(userRecommend.RecommendCode, "D")
-	}
-
-	totalTmp := len(tmpRecommendUserIds) - 1
-	for i := totalTmp; i >= 0; i-- {
-		tmpUserId, _ := strconv.ParseUint(tmpRecommendUserIds[i], 10, 64) // 最后一位是直推人
-		if 0 >= tmpUserId {
-			continue
-		}
-
-		// 增加业绩
-		if err = uuc.tx.ExecTx(ctx, func(ctx context.Context) error { // 事务
-			err = uuc.repo.UpdateUserMyTotalAmountAdd(ctx, tmpUserId, amount)
-			if err != nil {
-				return err
-			}
-
-			return nil
-		}); nil != err {
-			fmt.Println("遍历业绩：", err, tmpUserId, eth)
-			continue
-		}
-	}
-
-	return nil
-}
-
 type CardProductListResponse struct {
 	Total int           `json:"total"`
 	Rows  []CardProduct `json:"rows"`
@@ -740,6 +811,64 @@ func CreateCardholderRequest(productId uint64, user *User) (*CreateCardholderRes
 	var result CreateCardholderResponse
 	if err := json.Unmarshal(body, &result); err != nil {
 		return nil, fmt.Errorf("json unmarshal error: %v", err)
+	}
+
+	return &result, nil
+}
+
+type CardInfoResponse struct {
+	Code int    `json:"code"`
+	Msg  string `json:"msg"`
+	Data struct {
+		CardID     string `json:"cardId"`
+		Pan        string `json:"pan"`
+		CardStatus string `json:"cardStatus"`
+		Holder     struct {
+			HolderID string `json:"holderId"`
+		} `json:"holder"`
+	} `json:"data"`
+}
+
+func GetCardInfoRequestWithSign(cardId string) (*CardInfoResponse, error) {
+	baseUrl := "http://120.79.173.55:9102/prod-api/vcc/api/v1/cards/info"
+	//baseUrl := "https://www.ispay.com/prod-api/vcc/api/v1/cards/info"
+
+	reqBody := map[string]interface{}{
+		"merchantId": "322338",
+		"cardId":     cardId, // 如果需要传 cardId，根据实际接口文档添加
+	}
+
+	sign := GenerateSign(reqBody, "j4gqNRcpTDJr50AP2xd9obKWZIKWbeo9")
+	reqBody["sign"] = sign
+
+	jsonData, _ := json.Marshal(reqBody)
+	req, _ := http.NewRequest("POST", baseUrl, bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Language", "zh_CN")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func(Body io.ReadCloser) {
+		errTwo := Body.Close()
+		if errTwo != nil {
+
+		}
+	}(resp.Body)
+
+	body, _ := ioutil.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("request failed: %s", string(body))
+	}
+
+	fmt.Println("响应报文:", string(body))
+
+	var result CardInfoResponse
+	if err = json.Unmarshal(body, &result); err != nil {
+		fmt.Println("卡信息 JSON 解析失败:", err)
+		return nil, err
 	}
 
 	return &result, nil

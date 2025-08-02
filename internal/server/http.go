@@ -49,6 +49,7 @@ func NewHTTPServer(c *conf.Server, userService *service.UserService, logger log.
 func NewWhiteListMatcher() selector.MatchFunc {
 	whiteList := make(map[string]struct{})
 	whiteList["/api.user.v1.User/OpenCardHandle"] = struct{}{}
+	whiteList["/api.user.v1.User/CardStatusHandle"] = struct{}{}
 	whiteList["/api.user.v1.User/Deposit"] = struct{}{}
 	return func(ctx context.Context, operation string) bool {
 		if _, ok := whiteList[operation]; ok {
