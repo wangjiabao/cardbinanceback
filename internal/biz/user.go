@@ -427,7 +427,7 @@ func (uuc *UserUseCase) CardStatusHandle(ctx context.Context) error {
 		}
 
 		if "ACTIVE" == resCard.Data.CardStatus {
-			fmt.Println("开卡状态，激活：", resCard)
+			fmt.Println("开卡状态，激活：", resCard, user.ID)
 			if err = uuc.tx.ExecTx(ctx, func(ctx context.Context) error { // 事务
 				err = uuc.repo.UpdateCardSucces(ctx, user.ID, resCard.Data.Pan)
 				if err != nil {
@@ -436,14 +436,14 @@ func (uuc *UserUseCase) CardStatusHandle(ctx context.Context) error {
 
 				return nil
 			}); nil != err {
-				fmt.Println("err，开卡成功", err)
+				fmt.Println("err，开卡成功", err, user.ID)
 				continue
 			}
 		} else if "PENDING" == resCard.Data.CardStatus {
-			fmt.Println("开卡状态，待处理：", resCard)
+			fmt.Println("开卡状态，待处理：", resCard, user.ID)
 			continue
 		} else {
-			fmt.Println("开卡状态，失败：", resCard)
+			fmt.Println("开卡状态，失败：", resCard, user.ID)
 			err = uuc.backCard(ctx, user.ID)
 			if nil != err {
 				fmt.Println("回滚了用户失败", user, err)
