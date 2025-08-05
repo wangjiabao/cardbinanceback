@@ -64,8 +64,8 @@ type Config struct {
 }
 
 type Withdraw struct {
-	ID        int64
-	UserId    int64
+	ID        uint64
+	UserId    uint64
 	Amount    float64
 	RelAmount float64
 	Status    string
@@ -106,13 +106,14 @@ type UserRepo interface {
 	CreateUserRecommend(ctx context.Context, userId uint64, recommendUser *UserRecommend) (*UserRecommend, error)
 	GetUserRecommendByCode(code string) ([]*UserRecommend, error)
 	GetUserRecommendLikeCode(code string) ([]*UserRecommend, error)
-	GetUserByUserIds(userIds []uint64) (map[uint64]*User, error)
+	GetUserByUserIds(userIds ...uint64) (map[uint64]*User, error)
 	CreateCard(ctx context.Context, userId uint64, user *User) error
 	GetAllUsers() ([]*User, error)
 	UpdateCard(ctx context.Context, userId uint64, cardOrderId, card string) error
 	UpdateCardNo(ctx context.Context, userId uint64) error
 	UpdateCardSucces(ctx context.Context, userId uint64, cardNum string) error
 	CreateCardRecommend(ctx context.Context, userId uint64, amount float64, vip uint64, address string) error
+	GetWithdrawPassOrRewardedFirst(ctx context.Context) (*Withdraw, error)
 	AmountTo(ctx context.Context, userId, toUserId uint64, toAddress string, amount float64) error
 	Withdraw(ctx context.Context, userId uint64, amount, amountRel float64, address string) error
 	GetUserRewardByUserIdPage(ctx context.Context, b *Pagination, userId uint64, reason uint64) ([]*Reward, error, int64)
@@ -124,6 +125,7 @@ type UserRepo interface {
 	GetUserRecommends() ([]*UserRecommend, error)
 	CreateEthUserRecordListByHash(ctx context.Context, r *EthUserRecord) (*EthUserRecord, error)
 	UpdateUserMyTotalAmountAdd(ctx context.Context, userId uint64, amount uint64) error
+	UpdateWithdraw(ctx context.Context, id uint64, status string) (*Withdraw, error)
 }
 
 type UserUseCase struct {
@@ -525,6 +527,22 @@ func (uuc *UserUseCase) backCard(ctx context.Context, userId uint64) error {
 	}
 
 	return nil
+}
+
+func (uuc *UserUseCase) GetWithdrawPassOrRewardedFirst(ctx context.Context) (*Withdraw, error) {
+	return uuc.repo.GetWithdrawPassOrRewardedFirst(ctx)
+}
+
+func (uuc *UserUseCase) GetUserByUserIds(userIds ...uint64) (map[uint64]*User, error) {
+	return uuc.repo.GetUserByUserIds(userIds...)
+}
+
+func (uuc *UserUseCase) UpdateWithdrawDoing(ctx context.Context, id uint64) (*Withdraw, error) {
+	return uuc.repo.UpdateWithdraw(ctx, id, "doing")
+}
+
+func (uuc *UserUseCase) UpdateWithdrawSuccess(ctx context.Context, id uint64) (*Withdraw, error) {
+	return uuc.repo.UpdateWithdraw(ctx, id, "success")
 }
 
 func GenerateSign(params map[string]interface{}, signKey string) string {

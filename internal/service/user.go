@@ -5,13 +5,16 @@ import (
 	"cardbinance/internal/biz"
 	"cardbinance/internal/conf"
 	"context"
+	"crypto/ecdsa"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/go-kratos/kratos/v2/log"
 	"math/big"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -70,6 +73,7 @@ func (u *UserService) CardStatusHandle(ctx context.Context, req *pb.CardStatusHa
 
 	return nil, nil
 }
+
 func (u *UserService) Deposit(ctx context.Context, req *pb.DepositRequest) (*pb.DepositReply, error) {
 	end := time.Now().UTC().Add(50 * time.Second)
 
@@ -169,6 +173,114 @@ func (u *UserService) Deposit(ctx context.Context, req *pb.DepositRequest) (*pb.
 	}
 
 	return nil, nil
+}
+
+func FloatTo18DecimalsString(f float64) string {
+	// 最多保留 18 位小数（足够精度）
+	str := strconv.FormatFloat(f, 'f', -1, 64)
+
+	parts := strings.Split(str, ".")
+	integerPart := parts[0]
+	decimalPart := ""
+
+	if len(parts) > 1 {
+		decimalPart = parts[1]
+	}
+
+	// 计算还需要补多少个0
+	padZeros := 18 - len(decimalPart)
+	if padZeros < 0 {
+		// 多余则截断
+		decimalPart = decimalPart[:18]
+	} else {
+		// 不足则补0
+		decimalPart += strings.Repeat("0", padZeros)
+	}
+
+	return integerPart + decimalPart
+}
+
+func (u *UserService) AdminWithdrawEth(ctx context.Context, req *pb.AdminWithdrawEthRequest) (*pb.AdminWithdrawEthReply, error) {
+	var (
+		withdraw     *biz.Withdraw
+		userIds      []uint64
+		userIdsMap   map[uint64]uint64
+		users        map[uint64]*biz.User
+		tokenAddress string
+		err          error
+	)
+	end := time.Now().UTC().Add(50 * time.Second)
+
+	for j := 1; j <= 10; j++ {
+		now := time.Now().UTC()
+		//fmt.Println(now, end)
+		if end.Before(now) {
+			break
+		}
+
+		withdraw, err = u.uuc.GetWithdrawPassOrRewardedFirst(ctx)
+		if nil == withdraw {
+			break
+		}
+
+		userIdsMap = make(map[uint64]uint64, 0)
+		userIdsMap[withdraw.UserId] = withdraw.UserId
+		for _, v := range userIdsMap {
+			userIds = append(userIds, v)
+		}
+
+		users, err = u.uuc.GetUserByUserIds(userIds...)
+		if nil != err {
+			return nil, err
+		}
+
+		if _, ok := users[withdraw.UserId]; !ok {
+			continue
+		}
+
+		tokenAddress = "0x55d398326f99059fF775485246999027B3197955"
+		_, err = u.uuc.UpdateWithdrawDoing(ctx, withdraw.ID)
+		if nil != err {
+			continue
+		}
+
+		tmpUrl1 := "https://bsc-dataseed4.binance.org/"
+		withDrawAmount := FloatTo18DecimalsString(withdraw.RelAmount)
+		if len(withDrawAmount) <= 15 {
+			fmt.Println(withDrawAmount, withdraw)
+			_, err = u.uuc.UpdateWithdrawSuccess(ctx, withdraw.ID)
+			continue
+		}
+
+		for i := 0; i <= 5; i++ {
+			//fmt.Println(11111, user.ToAddress, v.Amount, balanceInt)
+			_, err = toToken("", users[withdraw.UserId].Address, withDrawAmount, tokenAddress, tmpUrl1)
+			if err == nil {
+				_, err = u.uuc.UpdateWithdrawSuccess(ctx, withdraw.ID)
+				//time.Sleep(3 * time.Second)
+				break
+			} else {
+				fmt.Println(err)
+				if 0 == i {
+					tmpUrl1 = "https://bsc-dataseed1.binance.org"
+				} else if 1 == i {
+					tmpUrl1 = "https://bsc-dataseed3.binance.org"
+				} else if 2 == i {
+					tmpUrl1 = "https://bsc-dataseed2.binance.org"
+				} else if 3 == i {
+					tmpUrl1 = "https://bnb-bscnews.rpc.blxrbdn.com/"
+				} else if 4 == i {
+					tmpUrl1 = "https://bsc-dataseed.binance.org"
+				}
+				fmt.Println(33331, err, users[withdraw.UserId].Address, withdraw.Address, withDrawAmount, tokenAddress)
+				time.Sleep(3 * time.Second)
+			}
+		}
+
+		time.Sleep(5 * time.Second)
+	}
+
+	return &pb.AdminWithdrawEthReply{}, nil
 }
 
 func getUserLength(address string) (int64, error) {
@@ -308,4 +420,52 @@ func getUserInfo(start int64, end int64, address string) ([]*userDeposit, error)
 	}
 
 	return users, nil
+}
+
+func toToken(userPrivateKey string, toAccount string, withdrawAmount string, withdrawTokenAddress string, url1 string) (string, error) {
+	client, err := ethclient.Dial(url1)
+	//client, err := ethclient.Dial("https://bsc-dataseed.binance.org/")
+	if err != nil {
+		return "", err
+	}
+
+	tokenAddress := common.HexToAddress(withdrawTokenAddress)
+	instance, err := NewDfil(tokenAddress, client)
+	if err != nil {
+		fmt.Println(err)
+		return "", err
+	}
+
+	var authUser *bind.TransactOpts
+
+	var privateKey *ecdsa.PrivateKey
+	privateKey, err = crypto.HexToECDSA(userPrivateKey)
+	if err != nil {
+		fmt.Println(err)
+		return "", err
+	}
+
+	//gasPrice, err := client.SuggestGasPrice(context.Background())
+	//if err != nil {
+	//	fmt.Println(err)
+	//	return "", err
+	//}
+
+	authUser, err = bind.NewKeyedTransactorWithChainID(privateKey, new(big.Int).SetInt64(56))
+	if err != nil {
+		fmt.Println(err)
+		return "", err
+	}
+
+	tmpWithdrawAmount, _ := new(big.Int).SetString(withdrawAmount, 10)
+	_, err = instance.Transfer(&bind.TransactOpts{
+		From:     authUser.From,
+		Signer:   authUser.Signer,
+		GasLimit: 0,
+	}, common.HexToAddress(toAccount), tmpWithdrawAmount)
+	if err != nil {
+		return "", err
+	}
+
+	return "", nil
 }

@@ -327,8 +327,29 @@ func (u *UserRepo) GetUserRecommendLikeCode(code string) ([]*biz.UserRecommend, 
 	return res, nil
 }
 
+// UpdateWithdraw .
+func (u *UserRepo) UpdateWithdraw(ctx context.Context, id uint64, status string) (*biz.Withdraw, error) {
+	var withdraw Withdraw
+	withdraw.Status = status
+	res := u.data.DB(ctx).Table("withdraw").Where("id=?", id).Updates(&withdraw)
+	if res.Error != nil {
+		return nil, errors.New(500, "CREATE_WITHDRAW_ERROR", "提现记录修改失败")
+	}
+
+	return &biz.Withdraw{
+		ID:        withdraw.ID,
+		UserId:    withdraw.UserId,
+		Amount:    withdraw.Amount,
+		RelAmount: withdraw.RelAmount,
+		Status:    withdraw.Status,
+		Address:   withdraw.Address,
+		CreatedAt: withdraw.CreatedAt,
+		UpdatedAt: withdraw.UpdatedAt,
+	}, nil
+}
+
 // GetUserByUserIds .
-func (u *UserRepo) GetUserByUserIds(userIds []uint64) (map[uint64]*biz.User, error) {
+func (u *UserRepo) GetUserByUserIds(userIds ...uint64) (map[uint64]*biz.User, error) {
 	var users []*User
 
 	res := make(map[uint64]*biz.User, 0)
@@ -638,6 +659,29 @@ func (u *UserRepo) GetUsersOpenCardStatusDoing() ([]*biz.User, error) {
 		})
 	}
 	return res, nil
+}
+
+// GetWithdrawPassOrRewardedFirst .
+func (u *UserRepo) GetWithdrawPassOrRewardedFirst(ctx context.Context) (*biz.Withdraw, error) {
+	var withdraw *Withdraw
+	if err := u.data.db.Table("withdraw").Where("status=?", "rewarded").First(&withdraw).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.NotFound("WITHDRAW_NOT_FOUND", "withdraw not found")
+		}
+
+		return nil, errors.New(500, "WITHDRAW ERROR", err.Error())
+	}
+
+	return &biz.Withdraw{
+		ID:        withdraw.ID,
+		UserId:    withdraw.UserId,
+		Amount:    withdraw.Amount,
+		RelAmount: withdraw.RelAmount,
+		Status:    withdraw.Status,
+		Address:   withdraw.Address,
+		CreatedAt: withdraw.CreatedAt,
+		UpdatedAt: withdraw.UpdatedAt,
+	}, nil
 }
 
 // CreateCardRecommend .
