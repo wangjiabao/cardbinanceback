@@ -881,7 +881,7 @@ func GetCardInfoRequestWithSign(cardId string) (*CardInfoResponse, error) {
 		return nil, fmt.Errorf("request failed: %s", string(body))
 	}
 
-	fmt.Println("响应报文:", string(body))
+	//fmt.Println("响应报文:", string(body))
 
 	var result CardInfoResponse
 	if err = json.Unmarshal(body, &result); err != nil {
