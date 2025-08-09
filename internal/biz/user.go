@@ -963,7 +963,6 @@ type CardHolderData struct {
 	CountryCode string `json:"countryCode"`
 	PhoneNumber string `json:"phoneNumber"`
 	Status      string `json:"status"`
-	ProofFile   string `json:"proofFile"`
 }
 
 type QueryCardHolderResponse struct {
