@@ -346,6 +346,30 @@ func (uuc *UserUseCase) OpenCardHandle(ctx context.Context) error {
 			continue
 		}
 
+		//
+		var (
+			resHolder *QueryCardHolderResponse
+		)
+
+		resHolder, err = QueryCardHolderWithSign(holderId, productIdUseInt64)
+		if nil == resHolder || err != nil || 200 != resHolder.Code {
+			fmt.Println(user, err, "持卡人信息请求错误", resHolder)
+			continue
+		}
+
+		if "active" == resHolder.Data.Status {
+
+		} else if "pending" == resHolder.Data.Status {
+			continue
+		} else {
+			fmt.Println(user, err, "持卡人创建失败", user, resHolder)
+			err = uuc.backCard(ctx, user.ID)
+			if nil != err {
+				fmt.Println("回滚了用户失败", user, err)
+			}
+			continue
+		}
+
 		resCreatCard, err = CreateCardRequestWithSign(0, holderId, productIdUseInt64)
 		if nil == resCreatCard || 200 != resCreatCard.Code || err != nil {
 			fmt.Println("开卡订单创建失败", user, resCreatCard, err)
@@ -420,8 +444,9 @@ func (uuc *UserUseCase) CardStatusHandle(ctx context.Context) error {
 	for _, user := range userOpenCard {
 		//
 		var (
-			resHolder   *QueryCardHolderResponse
-			tmpHolderId uint64
+			resHolder         *QueryCardHolderResponse
+			tmpHolderId       uint64
+			productIdUseInt64 uint64
 		)
 		tmpHolderId, err = strconv.ParseUint(user.CardUserId, 10, 64)
 		if err != nil || 0 >= tmpHolderId {
@@ -429,7 +454,13 @@ func (uuc *UserUseCase) CardStatusHandle(ctx context.Context) error {
 			continue
 		}
 
-		resHolder, err = QueryCardHolderWithSign(tmpHolderId)
+		productIdUseInt64, err = strconv.ParseUint(user.ProductId, 10, 64)
+		if nil != err {
+			fmt.Println("产品信息错误1")
+			continue
+		}
+
+		resHolder, err = QueryCardHolderWithSign(tmpHolderId, productIdUseInt64)
 		if nil == resHolder || err != nil || 200 != resHolder.Code {
 			fmt.Println(user, err, "持卡人信息请求错误", resHolder)
 			continue
@@ -441,10 +472,6 @@ func (uuc *UserUseCase) CardStatusHandle(ctx context.Context) error {
 			continue
 		} else {
 			fmt.Println(user, err, "持卡人创建失败", user, resHolder)
-			err = uuc.backCard(ctx, user.ID)
-			if nil != err {
-				fmt.Println("回滚了用户失败", user, err)
-			}
 			continue
 		}
 
@@ -946,13 +973,14 @@ type QueryCardHolderResponse struct {
 	Data CardHolderData `json:"data"`
 }
 
-func QueryCardHolderWithSign(holderId uint64) (*QueryCardHolderResponse, error) {
+func QueryCardHolderWithSign(holderId uint64, productId uint64) (*QueryCardHolderResponse, error) {
 	baseUrl := "https://www.ispay.com/prod-api/vcc/api/v1/cards/holders/query"
 
 	// 请求体
 	reqBody := map[string]interface{}{
 		"holderId":   holderId,
 		"merchantId": "322338",
+		"productId":  productId,
 	}
 
 	// 生成签名
