@@ -431,7 +431,7 @@ func (uuc *UserUseCase) CardStatusHandle(ctx context.Context) error {
 
 		resHolder, err = QueryCardHolderWithSign(tmpHolderId)
 		if nil == resHolder || err != nil || 200 != resHolder.Code {
-			fmt.Println(user, err, "持卡人信息请求错误", user)
+			fmt.Println(user, err, "持卡人信息请求错误", resHolder)
 			continue
 		}
 
