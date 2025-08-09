@@ -357,7 +357,7 @@ func (uuc *UserUseCase) OpenCardHandle(ctx context.Context) error {
 		}
 		fmt.Println("开卡信息：", user, resCreatCard)
 
-		if 0 > len(resCreatCard.Data.CardID) || 0 > len(resCreatCard.Data.CardOrderID) {
+		if 0 >= len(resCreatCard.Data.CardID) || 0 >= len(resCreatCard.Data.CardOrderID) {
 			fmt.Println("开卡订单信息错误", resCreatCard, err)
 			err = uuc.backCard(ctx, user.ID)
 			if nil != err {
@@ -422,6 +422,10 @@ func (uuc *UserUseCase) CardStatusHandle(ctx context.Context) error {
 		var (
 			resCard *CardInfoResponse
 		)
+		if 2 >= len(user.Card) {
+			continue
+		}
+
 		resCard, err = GetCardInfoRequestWithSign(user.Card)
 		if nil == resCard || 200 != resCard.Code || err != nil {
 			fmt.Println(resCard, err)
