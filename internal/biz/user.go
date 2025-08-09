@@ -362,7 +362,7 @@ func (uuc *UserUseCase) OpenCardHandle(ctx context.Context) error {
 		} else if "pending" == resHolder.Data.Status {
 			continue
 		} else {
-			fmt.Println(user, err, "持卡人创建失败", user, resHolder)
+			fmt.Println(user, err, "持卡人创建失败", resHolder)
 			err = uuc.backCard(ctx, user.ID)
 			if nil != err {
 				fmt.Println("回滚了用户失败", user, err)
@@ -442,39 +442,6 @@ func (uuc *UserUseCase) CardStatusHandle(ctx context.Context) error {
 	}
 
 	for _, user := range userOpenCard {
-		//
-		var (
-			resHolder         *QueryCardHolderResponse
-			tmpHolderId       uint64
-			productIdUseInt64 uint64
-		)
-		tmpHolderId, err = strconv.ParseUint(user.CardUserId, 10, 64)
-		if err != nil || 0 >= tmpHolderId {
-			fmt.Println(user, err, "解析持卡人id错误")
-			continue
-		}
-
-		productIdUseInt64, err = strconv.ParseUint(user.ProductId, 10, 64)
-		if nil != err {
-			fmt.Println("产品信息错误1")
-			continue
-		}
-
-		resHolder, err = QueryCardHolderWithSign(tmpHolderId, productIdUseInt64)
-		if nil == resHolder || err != nil || 200 != resHolder.Code {
-			fmt.Println(user, err, "持卡人信息请求错误", resHolder)
-			continue
-		}
-
-		if "active" == resHolder.Data.Status {
-
-		} else if "pending" == resHolder.Data.Status {
-			continue
-		} else {
-			fmt.Println(user, err, "持卡人创建失败", user, resHolder)
-			continue
-		}
-
 		// 查询状态。成功分红
 		var (
 			resCard *CardInfoResponse
