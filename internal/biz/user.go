@@ -418,6 +418,36 @@ func (uuc *UserUseCase) CardStatusHandle(ctx context.Context) error {
 	}
 
 	for _, user := range userOpenCard {
+		//
+		var (
+			resHolder   *QueryCardHolderResponse
+			tmpHolderId uint64
+		)
+		tmpHolderId, err = strconv.ParseUint(user.CardUserId, 10, 64)
+		if err != nil || 0 >= tmpHolderId {
+			fmt.Println(user, err, "解析持卡人id错误")
+			continue
+		}
+
+		resHolder, err = QueryCardHolderWithSign(tmpHolderId)
+		if nil == resHolder || err != nil || 200 != resHolder.Code {
+			fmt.Println(user, err, "持卡人信息请求错误", user)
+			continue
+		}
+
+		if "active" == resHolder.Data.Status {
+
+		} else if "pending" == resHolder.Data.Status {
+			continue
+		} else {
+			fmt.Println(user, err, "持卡人创建失败", user, resHolder)
+			err = uuc.backCard(ctx, user.ID)
+			if nil != err {
+				fmt.Println("回滚了用户失败", user, err)
+			}
+			continue
+		}
+
 		// 查询状态。成功分红
 		var (
 			resCard *CardInfoResponse
@@ -890,6 +920,80 @@ func GetCardInfoRequestWithSign(cardId string) (*CardInfoResponse, error) {
 	var result CardInfoResponse
 	if err = json.Unmarshal(body, &result); err != nil {
 		fmt.Println("卡信息 JSON 解析失败:", err)
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+type CardHolderData struct {
+	HolderId        int64           `json:"holderId"`
+	Email           string          `json:"email"`
+	FirstName       string          `json:"firstName"`
+	LastName        string          `json:"lastName"`
+	Gender          string          `json:"gender"`
+	BirthDate       string          `json:"birthDate"`
+	CountryCode     string          `json:"countryCode"`
+	PhoneNumber     string          `json:"phoneNumber"`
+	Status          string          `json:"status"`
+	DeliveryAddress DeliveryAddress `json:"deliveryAddress"`
+	ProofFile       string          `json:"proofFile"`
+}
+
+type QueryCardHolderResponse struct {
+	Code int            `json:"code"`
+	Msg  string         `json:"msg"`
+	Data CardHolderData `json:"data"`
+}
+
+func QueryCardHolderWithSign(holderId uint64) (*QueryCardHolderResponse, error) {
+	baseUrl := "https://www.ispay.com/prod-api/vcc/api/v1/cards/holders/query"
+
+	// 请求体
+	reqBody := map[string]interface{}{
+		"holderId":   holderId,
+		"merchantId": "322338",
+	}
+
+	// 生成签名
+	sign := GenerateSign(reqBody, "j4gqNRcpTDJr50AP2xd9obKWZIKWbeo9")
+	reqBody["sign"] = sign
+
+	// 转 JSON
+	jsonData, _ := json.Marshal(reqBody)
+
+	// 打印调试
+	//fmt.Println("签名:", sign)
+	//fmt.Println("请求报文:", string(jsonData))
+
+	// 创建 HTTP 请求
+	req, _ := http.NewRequest("POST", baseUrl, bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Language", "zh_CN")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+
+		}
+	}(resp.Body)
+
+	// 读取响应
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return nil, err
+	}
+
+	//fmt.Println("响应报文:", string(body))
+
+	// 解析结果
+	var result QueryCardHolderResponse
+	if err = json.Unmarshal(body, &result); err != nil {
 		return nil, err
 	}
 
