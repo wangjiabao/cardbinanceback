@@ -954,17 +954,16 @@ func GetCardInfoRequestWithSign(cardId string) (*CardInfoResponse, error) {
 }
 
 type CardHolderData struct {
-	HolderId        int64           `json:"holderId"`
-	Email           string          `json:"email"`
-	FirstName       string          `json:"firstName"`
-	LastName        string          `json:"lastName"`
-	Gender          string          `json:"gender"`
-	BirthDate       string          `json:"birthDate"`
-	CountryCode     string          `json:"countryCode"`
-	PhoneNumber     string          `json:"phoneNumber"`
-	Status          string          `json:"status"`
-	DeliveryAddress DeliveryAddress `json:"deliveryAddress"`
-	ProofFile       string          `json:"proofFile"`
+	HolderId    string `json:"holderId"`
+	Email       string `json:"email"`
+	FirstName   string `json:"firstName"`
+	LastName    string `json:"lastName"`
+	Gender      string `json:"gender"`
+	BirthDate   string `json:"birthDate"`
+	CountryCode string `json:"countryCode"`
+	PhoneNumber string `json:"phoneNumber"`
+	Status      string `json:"status"`
+	ProofFile   string `json:"proofFile"`
 }
 
 type QueryCardHolderResponse struct {
