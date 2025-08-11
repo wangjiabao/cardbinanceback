@@ -6,6 +6,7 @@ import (
 	"cardbinance/internal/conf"
 	"context"
 	"crypto/ecdsa"
+	"encoding/json"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -13,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/go-kratos/kratos/v2/log"
 	"math/big"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -281,6 +283,64 @@ func (u *UserService) AdminWithdrawEth(ctx context.Context, req *pb.AdminWithdra
 	}
 
 	return &pb.AdminWithdrawEthReply{}, nil
+}
+
+type CallbackRequest struct {
+	Version   string          `json:"version"`
+	EventName string          `json:"eventName"`
+	EventType string          `json:"eventType"`
+	EventId   string          `json:"eventId"`
+	SourceId  string          `json:"sourceId"`
+	Data      json.RawMessage `json:"data"` // 用 RawMessage 接收动态结构
+}
+
+func (u *UserService) CallBack(w http.ResponseWriter, r *http.Request) {
+	// 从 http.Request 获取 context.Context
+	ctx := r.Context()
+
+	//body, _ := io.ReadAll(r.Body)
+	//fmt.Println("Raw Body:", string(body))
+
+	var req CallbackRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// 只要 Version 和 EventType，例如
+	fmt.Println("Version:", req.Version)
+	fmt.Println("EventType:", req.EventType)
+	fmt.Println("auth:", r.Header.Get("Authorization"))
+
+	switch req.EventType {
+	case "card.recharge.succeeded":
+		var rechargeData *biz.RechargeData
+		if err := json.Unmarshal(req.Data, &rechargeData); err != nil {
+			fmt.Println("Parse recharge data failed:", err)
+		}
+
+		_ = u.uuc.CallBackHandleThree(ctx, rechargeData)
+
+	case "cardholder.update": // 示例事件名，实际按你接口来改
+		var cardholderData *biz.CardUserHandle
+		if err := json.Unmarshal(req.Data, &cardholderData); err != nil {
+			fmt.Println("Parse cardholder data failed:", err)
+		}
+
+		_ = u.uuc.CallBackHandleOne(ctx, cardholderData)
+	case "card.create.succeeded":
+		var createData *biz.CardCreateData
+		if err := json.Unmarshal(req.Data, &createData); err != nil {
+			fmt.Println("Parse create data failed:", err)
+		}
+
+		_ = u.uuc.CallBackHandleTwo(ctx, createData)
+	default:
+		fmt.Println("Unhandled event type:", req.EventType)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"status":"ok"}`))
 }
 
 func getUserLength(address string) (int64, error) {

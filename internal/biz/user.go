@@ -573,6 +573,54 @@ func (uuc *UserUseCase) UpdateWithdrawSuccess(ctx context.Context, id uint64) (*
 	return uuc.repo.UpdateWithdraw(ctx, id, "success")
 }
 
+type CardUserHandle struct {
+	MerchantId    string `json:"merchantId"`
+	HolderId      int64  `json:"holderId"`
+	Email         string `json:"email"`
+	FirstName     string `json:"firstName"`
+	LastName      string `json:"lastName"`
+	BirthDate     string `json:"birthDate"`
+	CountryCode   string `json:"countryCode"`
+	PhoneAreaCode string `json:"phoneAreaCode"`
+	PhoneNumber   string `json:"phoneNumber"`
+	Status        string `json:"status"`
+	Remark        string `json:"remark"`
+}
+
+type CardCreateData struct {
+	MerchantId          string `json:"merchantId"`
+	ReferenceCode       string `json:"referenceCode"`
+	Otp                 string `json:"otp"`
+	CardId              int64  `json:"cardId"`
+	CardNumber          string `json:"cardNumber"`
+	TransactionCurrency string `json:"transactionCurrency"`
+	TransactionAmount   string `json:"transactionAmount"`
+}
+
+type RechargeData struct {
+	MerchantId          string `json:"merchantId"`
+	ReferenceCode       string `json:"referenceCode"`
+	Otp                 string `json:"otp"`
+	CardId              int64  `json:"cardId"`
+	CardNumber          string `json:"cardNumber"`
+	TransactionCurrency string `json:"transactionCurrency"`
+	TransactionAmount   string `json:"transactionAmount"`
+}
+
+func (uuc *UserUseCase) CallBackHandleOne(ctx context.Context, r *CardUserHandle) error {
+	fmt.Println(r)
+	return nil
+}
+func (uuc *UserUseCase) CallBackHandleTwo(ctx context.Context, r *CardCreateData) error {
+	fmt.Println(r)
+	return nil
+}
+
+func (uuc *UserUseCase) CallBackHandleThree(ctx context.Context, r *RechargeData) error {
+	fmt.Println(r)
+	return nil
+}
+
 func GenerateSign(params map[string]interface{}, signKey string) string {
 	// 1. 排除 sign 字段
 	var keys []string

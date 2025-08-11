@@ -42,6 +42,8 @@ func NewHTTPServer(c *conf.Server, userService *service.UserService, logger log.
 	}
 	srv := http.NewServer(opts...)
 	v1.RegisterUserHTTPServer(srv, userService)
+
+	srv.HandleFunc("/api/admin_dhb/callback", userService.CallBack)
 	return srv
 }
 
