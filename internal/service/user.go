@@ -318,21 +318,21 @@ func (u *UserService) CallBack(w http.ResponseWriter, r *http.Request) {
 	eventType := req.EventType
 
 	switch {
-	case strings.HasPrefix(eventType, "vcc.card.recharged.f"):
+	case strings.HasPrefix(eventType, "vcc.card.recharge.fai"):
 		var rechargeData *biz.RechargeData
 		if err := json.Unmarshal(req.Data, &rechargeData); err != nil {
 			fmt.Println("Parse recharge data failed:", err, string(req.Data))
 		}
 		_ = u.uuc.CallBackHandleThree(ctx, rechargeData)
 
-	case strings.HasPrefix(eventType, "card.holder.created.f"):
+	case strings.HasPrefix(eventType, "vcc.cardholder.create.fail"):
 		var cardholderData *biz.CardUserHandle
 		if err := json.Unmarshal(req.Data, &cardholderData); err != nil {
 			fmt.Println("Parse cardholder data failed:", err, string(req.Data))
 		}
 		_ = u.uuc.CallBackHandleOne(ctx, cardholderData)
 
-	case strings.HasPrefix(eventType, "vcc.card.created.f"):
+	case strings.HasPrefix(eventType, "vcc.card.create.fai"):
 		var createData *biz.CardCreateData
 		if err := json.Unmarshal(req.Data, &createData); err != nil {
 			fmt.Println("Parse create data failed:", err, string(req.Data))
