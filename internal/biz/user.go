@@ -525,6 +525,11 @@ func (uuc *UserUseCase) CardStatusHandle(ctx context.Context) error {
 			lastVip = usersMap[tmpUserId].Vip
 			tmpAmount := tmpRate
 
+			if 31 < tmpAmount {
+				fmt.Println("开卡遍历，vip信息设置错误，31：", usersMap[tmpUserId], lastVip, tmpAmount)
+				break
+			}
+
 			if err = uuc.tx.ExecTx(ctx, func(ctx context.Context) error { // 事务
 				err = uuc.repo.CreateCardRecommend(ctx, tmpUserId, float64(tmpAmount), usersMap[tmpUserId].Vip, user.Address)
 				if err != nil {
