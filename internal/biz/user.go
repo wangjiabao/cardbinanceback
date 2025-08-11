@@ -100,6 +100,8 @@ type UserRepo interface {
 	GetAndDeleteWalletTimestamp(ctx context.Context, wallet string) (string, error)
 	GetConfigByKeys(keys ...string) ([]*Config, error)
 	GetUserByAddress(address string) (*User, error)
+	GetUserByCard(card string) (*User, error)
+	GetUserByCardUserId(cardUserId string) (*User, error)
 	GetUserById(userId uint64) (*User, error)
 	GetUserRecommendByUserId(userId uint64) (*UserRecommend, error)
 	CreateUser(ctx context.Context, uc *User) (*User, error)
@@ -126,6 +128,7 @@ type UserRepo interface {
 	CreateEthUserRecordListByHash(ctx context.Context, r *EthUserRecord) (*EthUserRecord, error)
 	UpdateUserMyTotalAmountAdd(ctx context.Context, userId uint64, amount uint64) error
 	UpdateWithdraw(ctx context.Context, id uint64, status string) (*Withdraw, error)
+	InsertCardRecord(ctx context.Context, userId, recordType uint64, remark string, code string, opt string) error
 }
 
 type UserUseCase struct {
@@ -574,50 +577,89 @@ func (uuc *UserUseCase) UpdateWithdrawSuccess(ctx context.Context, id uint64) (*
 }
 
 type CardUserHandle struct {
-	MerchantId    string `json:"merchantId"`
-	HolderId      string `json:"holderId"`
-	Email         string `json:"email"`
-	FirstName     string `json:"firstName"`
-	LastName      string `json:"lastName"`
-	BirthDate     string `json:"birthDate"`
-	CountryCode   string `json:"countryCode"`
-	PhoneAreaCode string `json:"phoneAreaCode"`
-	PhoneNumber   string `json:"phoneNumber"`
-	Status        string `json:"status"`
-	Remark        string `json:"remark"`
+	MerchantId string `json:"merchantId"`
+	HolderId   string `json:"holderId"`
+	Status     string `json:"status"`
+	Remark     string `json:"remark"`
 }
 
 type CardCreateData struct {
-	MerchantId          string `json:"merchantId"`
-	ReferenceCode       string `json:"referenceCode"`
-	Otp                 string `json:"otp"`
-	CardId              string `json:"cardId"`
-	CardNumber          string `json:"cardNumber"`
-	TransactionCurrency string `json:"transactionCurrency"`
-	TransactionAmount   string `json:"transactionAmount"`
+	MerchantId string `json:"merchantId"`
+	//ReferenceCode string `json:"referenceCode"`
+	Remark     string `json:"remark"`
+	CardId     string `json:"cardId"`
+	CardNumber string `json:"cardNumber"`
+	//Opt string `json:"opt"`
 }
 
 type RechargeData struct {
-	MerchantId          string `json:"merchantId"`
-	ReferenceCode       string `json:"referenceCode"`
-	Otp                 string `json:"otp"`
-	CardId              string `json:"cardId"`
-	CardNumber          string `json:"cardNumber"`
-	TransactionCurrency string `json:"transactionCurrency"`
-	TransactionAmount   string `json:"transactionAmount"`
+	MerchantId string `json:"merchantId"`
+	//ReferenceCode string `json:"referenceCode"`
+	//Opt string `json:"opt"`
+	Remark     string `json:"remark"`
+	CardId     string `json:"cardId"`
+	CardNumber string `json:"cardNumber"`
 }
 
 func (uuc *UserUseCase) CallBackHandleOne(ctx context.Context, r *CardUserHandle) error {
 	fmt.Println("结果：", r)
+	var (
+		user *User
+		err  error
+	)
+	user, err = uuc.repo.GetUserByCardUserId(r.HolderId)
+	if nil != err {
+		fmt.Println("回调，不存在用户", r, err)
+		return nil
+	}
+
+	err = uuc.repo.InsertCardRecord(ctx, user.ID, 1, r.Remark, "", "")
+	if nil != err {
+		fmt.Println("回调，新增失败", r, err)
+		return nil
+	}
+
 	return nil
 }
 func (uuc *UserUseCase) CallBackHandleTwo(ctx context.Context, r *CardCreateData) error {
 	fmt.Println("结果：", r)
+	var (
+		user *User
+		err  error
+	)
+	user, err = uuc.repo.GetUserByCard(r.CardId)
+	if nil != err {
+		fmt.Println("回调，不存在用户", r, err)
+		return nil
+	}
+
+	err = uuc.repo.InsertCardRecord(ctx, user.ID, 2, r.Remark, "", "")
+	if nil != err {
+		fmt.Println("回调，新增失败", r, err)
+		return nil
+	}
+
 	return nil
 }
 
 func (uuc *UserUseCase) CallBackHandleThree(ctx context.Context, r *RechargeData) error {
 	fmt.Println("结果：", r)
+	var (
+		user *User
+		err  error
+	)
+	user, err = uuc.repo.GetUserByCard(r.CardId)
+	if nil != err {
+		fmt.Println("回调，不存在用户", r, err)
+		return nil
+	}
+
+	err = uuc.repo.InsertCardRecord(ctx, user.ID, 2, r.Remark, "", "")
+	if nil != err {
+		fmt.Println("回调，新增失败", r, err)
+		return nil
+	}
+
 	return nil
 }
 

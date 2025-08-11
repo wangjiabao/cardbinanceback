@@ -68,6 +68,17 @@ type Reward struct {
 	One       uint64    `gorm:"type:int;not null"`
 }
 
+type CardRecord struct {
+	ID         uint64    `gorm:"primarykey;type:int"`
+	UserId     uint64    `gorm:"type:int;not null"`
+	RecordType uint64    `gorm:"type:int;not null"`
+	Remark     string    `gorm:"type:varchar(500);not null"`
+	Code       string    `gorm:"type:varchar(100);not null"`
+	Opt        string    `gorm:"type:varchar(100);not null"`
+	CreatedAt  time.Time `gorm:"type:datetime;not null"`
+	UpdatedAt  time.Time `gorm:"type:datetime;not null"`
+}
+
 type Withdraw struct {
 	ID        uint64    `gorm:"primarykey;type:int"`
 	UserId    uint64    `gorm:"type:int"`
@@ -146,6 +157,60 @@ func (u *UserRepo) GetAndDeleteWalletTimestamp(ctx context.Context, wallet strin
 func (u *UserRepo) GetUserByAddress(address string) (*biz.User, error) {
 	var user User
 	if err := u.data.db.Where("address=?", address).Table("user").First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+
+		return nil, errors.New(500, "USER ERROR", err.Error())
+	}
+
+	return &biz.User{
+		CardAmount:    user.CardAmount,
+		MyTotalAmount: user.MyTotalAmount,
+		AmountTwo:     user.AmountTwo,
+		IsDelete:      user.IsDelete,
+		Vip:           user.Vip,
+		ID:            user.ID,
+		Address:       user.Address,
+		Card:          user.Card,
+		Amount:        user.Amount,
+		CardNumber:    user.CardNumber,
+		CardOrderId:   user.CardOrderId,
+		CreatedAt:     user.CreatedAt,
+		UpdatedAt:     user.UpdatedAt,
+	}, nil
+}
+
+func (u *UserRepo) GetUserByCardUserId(cardUserId string) (*biz.User, error) {
+	var user User
+	if err := u.data.db.Where("card_user_id=?", cardUserId).Table("user").First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+
+		return nil, errors.New(500, "USER ERROR", err.Error())
+	}
+
+	return &biz.User{
+		CardAmount:    user.CardAmount,
+		MyTotalAmount: user.MyTotalAmount,
+		AmountTwo:     user.AmountTwo,
+		IsDelete:      user.IsDelete,
+		Vip:           user.Vip,
+		ID:            user.ID,
+		Address:       user.Address,
+		Card:          user.Card,
+		Amount:        user.Amount,
+		CardNumber:    user.CardNumber,
+		CardOrderId:   user.CardOrderId,
+		CreatedAt:     user.CreatedAt,
+		UpdatedAt:     user.UpdatedAt,
+	}, nil
+}
+
+func (u *UserRepo) GetUserByCard(card string) (*biz.User, error) {
+	var user User
+	if err := u.data.db.Where("card=?", card).Table("user").First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -911,6 +976,25 @@ func (u *UserRepo) UpdateUserMyTotalAmountAdd(ctx context.Context, userId uint64
 		})
 	if res.Error != nil || 0 >= res.RowsAffected {
 		return errors.New(500, "UPDATE_USER_ERROR", "用户信息修改失败")
+	}
+
+	return nil
+}
+
+// InsertCardRecord .
+func (u *UserRepo) InsertCardRecord(ctx context.Context, userId, recordType uint64, remark string, code string, opt string) error {
+	var (
+		record CardRecord
+	)
+
+	record.UserId = userId
+	record.Remark = remark
+	record.RecordType = recordType
+	record.Code = code
+	record.Opt = opt
+	resInsert := u.data.DB(ctx).Table("card_record").Create(&record)
+	if resInsert.Error != nil || 0 >= resInsert.RowsAffected {
+		return errors.New(500, "CREATE_CARD_RECORD_ERROR", "信息创建失败")
 	}
 
 	return nil
