@@ -654,7 +654,7 @@ func (uuc *UserUseCase) CallBackHandleThree(ctx context.Context, r *RechargeData
 		return nil
 	}
 
-	err = uuc.repo.InsertCardRecord(ctx, user.ID, 2, r.Remark, "", "")
+	err = uuc.repo.InsertCardRecord(ctx, user.ID, 3, r.Remark, "", "")
 	if nil != err {
 		fmt.Println("回调，新增失败", r, err)
 		return nil
