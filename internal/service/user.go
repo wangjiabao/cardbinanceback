@@ -308,8 +308,8 @@ func (u *UserService) CallBack(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 只要 Version 和 EventType，例如
-	fmt.Println("Version:", req.Version)
-	fmt.Println("EventType:", req.EventType)
+	//fmt.Println("Version:", req.Version)
+	//fmt.Println("EventType:", req.EventType)
 	//fmt.Println("auth:", r.Header.Get("Authorization"))
 	//for k, v := range r.Header {
 	//	fmt.Println("Header:", k, v)
