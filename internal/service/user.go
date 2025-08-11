@@ -310,36 +310,37 @@ func (u *UserService) CallBack(w http.ResponseWriter, r *http.Request) {
 	// 只要 Version 和 EventType，例如
 	fmt.Println("Version:", req.Version)
 	fmt.Println("EventType:", req.EventType)
-	fmt.Println("auth:", r.Header.Get("Authorization"))
-	for k, v := range r.Header {
-		fmt.Println("Header:", k, v)
-	}
+	//fmt.Println("auth:", r.Header.Get("Authorization"))
+	//for k, v := range r.Header {
+	//	fmt.Println("Header:", k, v)
+	//}
+
 	eventType := req.EventType
 
 	switch {
 	case strings.HasPrefix(eventType, "card.recharge."):
 		var rechargeData *biz.RechargeData
 		if err := json.Unmarshal(req.Data, &rechargeData); err != nil {
-			fmt.Println("Parse recharge data failed:", err, req.Data)
+			fmt.Println("Parse recharge data failed:", err, string(req.Data))
 		}
 		_ = u.uuc.CallBackHandleThree(ctx, rechargeData)
 
 	case strings.HasPrefix(eventType, "card.holder.created."):
 		var cardholderData *biz.CardUserHandle
 		if err := json.Unmarshal(req.Data, &cardholderData); err != nil {
-			fmt.Println("Parse cardholder data failed:", err, req.Data)
+			fmt.Println("Parse cardholder data failed:", err, string(req.Data))
 		}
 		_ = u.uuc.CallBackHandleOne(ctx, cardholderData)
 
 	case strings.HasPrefix(eventType, "card.create."):
 		var createData *biz.CardCreateData
 		if err := json.Unmarshal(req.Data, &createData); err != nil {
-			fmt.Println("Parse create data failed:", err, req.Data)
+			fmt.Println("Parse create data failed:", err, string(req.Data))
 		}
 		_ = u.uuc.CallBackHandleTwo(ctx, createData)
 
 	default:
-		fmt.Println("Unhandled event type:", eventType)
+		fmt.Println("Unhandled event type:", eventType, string(req.Data))
 	}
 
 	w.Header().Set("Content-Type", "application/json")
