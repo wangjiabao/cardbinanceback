@@ -2,12 +2,15 @@ package biz
 
 import (
 	"bytes"
+	pb "cardbinance/api/user/v1"
+	"cardbinance/internal/pkg/middleware/auth"
 	"context"
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/go-kratos/kratos/v2/log"
+	jwt2 "github.com/golang-jwt/jwt/v5"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -18,6 +21,13 @@ import (
 	"sync"
 	"time"
 )
+
+type Admin struct {
+	ID       int64
+	Password string
+	Account  string
+	Type     string
+}
 
 type User struct {
 	ID            uint64
@@ -48,6 +58,9 @@ type User struct {
 	UpdatedAt     time.Time
 	VipTwo        uint64
 	VipThree      uint64
+	CardTwo       uint64
+	CanVip        uint64
+	UserCount     uint64
 }
 
 type UserRecommend struct {
@@ -134,6 +147,11 @@ type UserRepo interface {
 	InsertCardRecord(ctx context.Context, userId, recordType uint64, remark string, code string, opt string) error
 	UpdateCardTwo(ctx context.Context, id uint64) error
 	GetUserCardTwo() ([]*Reward, error)
+	GetUsers(b *Pagination, address string) ([]*User, error, int64)
+	GetAdminByAccount(ctx context.Context, account string, password string) (*Admin, error)
+	SetCanVip(ctx context.Context, userId uint64, lock uint64) (bool, error)
+	SetVipThree(ctx context.Context, userId uint64, vipThree uint64) (bool, error)
+	SetUserCount(ctx context.Context, userId uint64) (bool, error)
 }
 
 type UserUseCase struct {
@@ -760,6 +778,300 @@ func (uuc *UserUseCase) UpdateWithdrawDoing(ctx context.Context, id uint64) (*Wi
 
 func (uuc *UserUseCase) UpdateWithdrawSuccess(ctx context.Context, id uint64) (*Withdraw, error) {
 	return uuc.repo.UpdateWithdraw(ctx, id, "success")
+}
+
+func (uuc *UserUseCase) AdminLogin(ctx context.Context, req *pb.AdminLoginRequest, ca string) (*pb.AdminLoginReply, error) {
+	var (
+		admin *Admin
+		err   error
+	)
+
+	res := &pb.AdminLoginReply{}
+	password := fmt.Sprintf("%x", md5.Sum([]byte(req.SendBody.Password)))
+	fmt.Println(password)
+	admin, err = uuc.repo.GetAdminByAccount(ctx, req.SendBody.Account, password)
+	if nil != err {
+		return res, err
+	}
+
+	claims := auth.CustomClaims{
+		UserId:   uint64(admin.ID),
+		UserType: "admin",
+		RegisteredClaims: jwt2.RegisteredClaims{
+			NotBefore: jwt2.NewNumericDate(time.Now()),                     // 签名的生效时间
+			ExpiresAt: jwt2.NewNumericDate(time.Now().Add(48 * time.Hour)), // 2天过期
+			Issuer:    "game",
+		},
+	}
+
+	token, err := auth.CreateToken(claims, ca)
+	if err != nil {
+		return nil, err
+	}
+	res.Token = token
+	return res, nil
+}
+
+func (uuc *UserUseCase) AdminRewardList(ctx context.Context, req *pb.AdminRewardListRequest) (*pb.AdminRewardListReply, error) {
+	var (
+		userSearch  *User
+		userId      uint64 = 0
+		userRewards []*Reward
+		users       map[uint64]*User
+		userIdsMap  map[uint64]uint64
+		userIds     []uint64
+		err         error
+		count       int64
+	)
+	res := &pb.AdminRewardListReply{
+		Rewards: make([]*pb.AdminRewardListReply_List, 0),
+	}
+
+	// 地址查询
+	if "" != req.Address {
+		userSearch, err = uuc.repo.GetUserByAddress(req.Address)
+		if nil != err {
+			return res, nil
+		}
+		userId = userSearch.ID
+	}
+
+	userRewards, err, count = uuc.repo.GetUserRewardByUserIdPage(ctx, &Pagination{
+		PageNum:  int(req.Page),
+		PageSize: 10,
+	}, userId, req.Reason)
+	if nil != err {
+		return res, nil
+	}
+	res.Count = uint64(count)
+
+	userIdsMap = make(map[uint64]uint64, 0)
+	for _, vUserReward := range userRewards {
+		userIdsMap[vUserReward.UserId] = vUserReward.UserId
+	}
+	for _, v := range userIdsMap {
+		userIds = append(userIds, v)
+	}
+
+	users, err = uuc.repo.GetUserByUserIds(userIds...)
+	for _, vUserReward := range userRewards {
+		tmpUser := ""
+		if nil != users {
+			if _, ok := users[vUserReward.UserId]; ok {
+				tmpUser = users[vUserReward.UserId].Address
+			}
+		}
+
+		res.Rewards = append(res.Rewards, &pb.AdminRewardListReply_List{
+			CreatedAt:  vUserReward.CreatedAt.Add(8 * time.Hour).Format("2006-01-02 15:04:05"),
+			Amount:     fmt.Sprintf("%.2f", vUserReward.Amount),
+			Address:    tmpUser,
+			Reason:     vUserReward.Reason,
+			AddressTwo: vUserReward.Address,
+			One:        vUserReward.One,
+		})
+	}
+
+	return res, nil
+}
+
+func (uuc *UserUseCase) AdminUserList(ctx context.Context, req *pb.AdminUserListRequest) (*pb.AdminUserListReply, error) {
+	var (
+		users   []*User
+		userIds []uint64
+		count   int64
+		err     error
+	)
+
+	res := &pb.AdminUserListReply{
+		Users: make([]*pb.AdminUserListReply_UserList, 0),
+	}
+
+	users, err, count = uuc.repo.GetUsers(&Pagination{
+		PageNum:  int(req.Page),
+		PageSize: 10,
+	}, req.Address)
+	if nil != err {
+		return res, nil
+	}
+	res.Count = count
+
+	for _, vUsers := range users {
+		userIds = append(userIds, vUsers.ID)
+	}
+
+	// 推荐人
+	var (
+		userRecommends    []*UserRecommend
+		myLowUser         map[uint64][]*UserRecommend
+		userRecommendsMap map[uint64]*UserRecommend
+	)
+
+	myLowUser = make(map[uint64][]*UserRecommend, 0)
+	userRecommendsMap = make(map[uint64]*UserRecommend, 0)
+
+	userRecommends, err = uuc.repo.GetUserRecommends()
+	if nil != err {
+		fmt.Println("今日分红错误用户获取失败2")
+		return nil, err
+	}
+
+	for _, vUr := range userRecommends {
+		userRecommendsMap[vUr.UserId] = vUr
+
+		// 我的直推
+		var (
+			myUserRecommendUserId uint64
+			tmpRecommendUserIds   []string
+		)
+
+		tmpRecommendUserIds = strings.Split(vUr.RecommendCode, "D")
+		if 2 <= len(tmpRecommendUserIds) {
+			myUserRecommendUserId, _ = strconv.ParseUint(tmpRecommendUserIds[len(tmpRecommendUserIds)-1], 10, 64) // 最后一位是直推人
+		}
+
+		if 0 >= myUserRecommendUserId {
+			continue
+		}
+
+		if _, ok := myLowUser[myUserRecommendUserId]; !ok {
+			myLowUser[myUserRecommendUserId] = make([]*UserRecommend, 0)
+		}
+
+		myLowUser[myUserRecommendUserId] = append(myLowUser[myUserRecommendUserId], vUr)
+	}
+
+	var (
+		usersAll []*User
+		usersMap map[uint64]*User
+	)
+	usersAll, err = uuc.repo.GetAllUsers()
+	if nil == usersAll {
+		return nil, nil
+	}
+	usersMap = make(map[uint64]*User, 0)
+
+	for _, vUsers := range usersAll {
+		usersMap[vUsers.ID] = vUsers
+	}
+
+	for _, vUsers := range users {
+		// 推荐人
+		var (
+			userRecommend *UserRecommend
+		)
+
+		addressMyRecommend := ""
+		if _, ok := userRecommendsMap[vUsers.ID]; ok {
+			userRecommend = userRecommendsMap[vUsers.ID]
+
+			if nil != userRecommend && "" != userRecommend.RecommendCode {
+				var (
+					tmpRecommendUserIds   []string
+					myUserRecommendUserId uint64
+				)
+				tmpRecommendUserIds = strings.Split(userRecommend.RecommendCode, "D")
+				if 2 <= len(tmpRecommendUserIds) {
+					myUserRecommendUserId, _ = strconv.ParseUint(tmpRecommendUserIds[len(tmpRecommendUserIds)-1], 10, 64) // 最后一位是直推人
+				}
+
+				if 0 < myUserRecommendUserId {
+					if _, ok2 := usersMap[myUserRecommendUserId]; ok2 {
+						addressMyRecommend = usersMap[myUserRecommendUserId].Address
+					}
+				}
+			}
+		}
+
+		lenUsers := uint64(0)
+		if _, ok := myLowUser[vUsers.ID]; ok {
+			lenUsers = uint64(len(myLowUser[vUsers.ID]))
+		}
+
+		res.Users = append(res.Users, &pb.AdminUserListReply_UserList{
+			UserId:             vUsers.ID,
+			CreatedAt:          vUsers.CreatedAt.Add(8 * time.Hour).Format("2006-01-02 15:04:05"),
+			Address:            vUsers.Address,
+			Amount:             fmt.Sprintf("%.2f", vUsers.Amount),
+			Vip:                vUsers.Vip,
+			CanVip:             vUsers.CanVip,
+			VipThree:           vUsers.VipThree,
+			MyRecommendAddress: addressMyRecommend,
+			HistoryRecommend:   lenUsers,
+			MyTotalAmount:      vUsers.MyTotalAmount,
+			Card:               vUsers.Card,
+			CardNumber:         vUsers.CardNumber,
+			CardOrderId:        vUsers.CardOrderId,
+			UserCount:          vUsers.UserCount,
+			VipTwo:             vUsers.VipTwo,
+			CardTwo:            vUsers.CardTwo,
+		})
+	}
+
+	return res, nil
+}
+
+func (uuc *UserUseCase) UpdateCanVip(ctx context.Context, req *pb.UpdateCanVipRequest) (*pb.UpdateCanVipReply, error) {
+	var (
+		err  error
+		lock uint64
+	)
+
+	res := &pb.UpdateCanVipReply{}
+
+	if 1 == req.SendBody.CanVip {
+		lock = 1
+	} else {
+		lock = 0
+	}
+
+	_, err = uuc.repo.SetCanVip(ctx, req.SendBody.UserId, lock)
+	if nil != err {
+		return res, err
+	}
+
+	return res, nil
+}
+
+func (uuc *UserUseCase) SetVipThree(ctx context.Context, req *pb.SetVipThreeRequest) (*pb.SetVipThreeReply, error) {
+	var (
+		err  error
+		lock uint64
+	)
+
+	res := &pb.SetVipThreeReply{}
+
+	if 1 == req.SendBody.VipThree {
+		lock = 1
+	} else if 2 == req.SendBody.VipThree {
+		lock = 2
+	} else if 3 == req.SendBody.VipThree {
+		lock = 3
+	} else {
+		lock = 0
+	}
+
+	_, err = uuc.repo.SetVipThree(ctx, req.SendBody.UserId, lock)
+	if nil != err {
+		return res, err
+	}
+
+	return res, nil
+}
+
+func (uuc *UserUseCase) SetUserCount(ctx context.Context, req *pb.SetUserCountRequest) (*pb.SetUserCountReply, error) {
+	var (
+		err error
+	)
+
+	res := &pb.SetUserCountReply{}
+
+	_, err = uuc.repo.SetUserCount(ctx, req.SendBody.UserId)
+	if nil != err {
+		return res, err
+	}
+
+	return res, nil
 }
 
 type CardUserHandle struct {

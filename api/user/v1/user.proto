@@ -39,7 +39,155 @@ service User {
 			get: "/api/admin_dhb/reward_card_two"
 		};
 	};
+
+	rpc AdminRewardList (AdminRewardListRequest) returns (AdminRewardListReply) {
+		option (google.api.http) = {
+			get: "/api/admin_dhb/reward_list"
+		};
+	};
+
+	rpc AdminUserList (AdminUserListRequest) returns (AdminUserListReply) {
+		option (google.api.http) = {
+			get: "/api/admin_dhb/user_list"
+		};
+	};
+
+	rpc AdminLogin (AdminLoginRequest) returns (AdminLoginReply) {
+		option (google.api.http) = {
+			post: "/api/admin_dhb/login"
+			body: "send_body"
+		};
+	};
+
+	rpc UpdateCanVip (UpdateCanVipRequest) returns (UpdateCanVipReply) {
+		option (google.api.http) = {
+			post: "/api/admin_dhb/set_can_vip"
+			body: "send_body"
+		};
+	};
+
+	rpc SetVipThree (SetVipThreeRequest) returns (SetVipThreeReply) {
+		option (google.api.http) = {
+			post: "/api/admin_dhb/set_vip_three"
+			body: "send_body"
+		};
+	};
+
+	rpc SetUserCount (SetUserCountRequest) returns (SetUserCountReply) {
+		option (google.api.http) = {
+			post: "/api/admin_dhb/set_user_count"
+			body: "send_body"
+		};
+	};
 }
+
+message SetUserCountRequest {
+	message SendBody{
+		uint64 userId = 1;
+	}
+
+	SendBody send_body = 1;
+}
+
+message SetUserCountReply {
+}
+
+message SetVipThreeRequest {
+	message SendBody{
+		uint64 userId = 1;
+		uint64 vipThree = 2; //3省，2市 1区，0取消
+	}
+
+	SendBody send_body = 1;
+}
+
+message SetVipThreeReply {
+}
+
+message UpdateCanVipRequest {
+	message SendBody{
+		uint64 userId = 1;
+		uint64 canVip = 2; //0不允许 1允许
+	}
+
+	SendBody send_body = 1;
+}
+
+message UpdateCanVipReply {
+}
+
+message AdminLoginRequest {
+	message SendBody{
+		string account = 1;
+		string password = 2;
+	}
+
+	SendBody send_body = 1;
+}
+
+message AdminLoginReply {
+	string token = 1;
+}
+
+message AdminUserListRequest {
+	int64 page = 1;
+	string address = 2;
+}
+
+message AdminUserListReply { // 用户信息
+	repeated UserList users = 1;
+	message UserList {
+		uint64 userId = 8;
+		string createdAt = 1; // 创建时间
+		string address = 2; // 地址
+		string myRecommendAddress = 5; // 推荐人
+		string amount = 12; // 账户余额
+		uint64 myTotalAmount = 13; // 业绩
+		uint64 vip = 3; // 虚拟卡分红级别
+		uint64 canVip = 7; // 允许app设置级别，0不允许，1允许
+		uint64 vipThree = 9; // 实体卡分红级别，3省，2市，1区
+		uint64 historyRecommend = 6; // 直推人数
+		string card = 10; // 卡片id
+		string cardNumber = 11; // 卡号
+		string cardOrderId = 14; // 开卡订单号
+		uint64 userCount = 15; // 开卡失败次数
+		uint64 vipTwo = 16; // 区域，0老区，30新区
+		uint64 cardTwo = 17; // 实体卡提交状态，0未提交，1已提交
+	}
+
+	int64 count = 2;
+}
+
+message AdminRewardListRequest {
+	uint64 page = 1;
+	string address = 2;
+	uint64 reason = 3;
+}
+
+message AdminRewardListReply {
+	repeated List rewards = 1;
+	message List {
+		string createdAt = 1; // 时间
+		string amount = 2; // 金额
+		string address = 5; // 地址
+		// 原因 每一条替换文案
+		// 实体卡开卡收益reason=11
+		// 虚拟卡开卡收益reason=6
+		// 划转reason=5
+		// 提现reason=2
+		// 充值reason=1
+		// 开实体卡reason=9
+		// 开虚拟卡reason=3
+		// 开虚拟卡失败退款reason=7
+		// 虚拟卡充值reason=4
+		uint64 reason = 6;
+		string addressTwo = 7; // 目标地址或订单号
+		uint64 one = 8; // vip级别
+	}
+
+	uint64 count = 2;
+}
+
 message OpenCardHandleRequest {
 }
 

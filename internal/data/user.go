@@ -40,6 +40,16 @@ type User struct {
 	UpdatedAt     time.Time `gorm:"type:datetime;not null"`
 	VipTwo        uint64    `gorm:"type:int"`
 	VipThree      uint64    `gorm:"type:int"`
+	CardTwo       uint64    `gorm:"type:int"`
+	CanVip        uint64    `gorm:"type:int"`
+	UserCount     uint64    `gorm:"type:int"`
+}
+
+type Admin struct {
+	ID       int64  `gorm:"primarykey;type:int"`
+	Account  string `gorm:"type:varchar(100);not null"`
+	Password string `gorm:"type:varchar(100);not null"`
+	Type     string `gorm:"type:varchar(40);not null"`
 }
 
 type UserRecommend struct {
@@ -1078,4 +1088,109 @@ func (u *UserRepo) GetUserCardTwo() ([]*biz.Reward, error) {
 	}
 
 	return res, nil
+}
+
+// GetUsers .
+func (u *UserRepo) GetUsers(b *biz.Pagination, address string) ([]*biz.User, error, int64) {
+	var (
+		users []*User
+		count int64
+	)
+	instance := u.data.db.Table("user")
+	if "" != address {
+		instance = instance.Where("address=?", address)
+	}
+
+	instance = instance.Count(&count)
+	if err := instance.Scopes(Paginate(b.PageNum, b.PageSize)).Order("id desc").Find(&users).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.NotFound("USER_NOT_FOUND", "user not found"), 0
+		}
+
+		return nil, errors.New(500, "USER ERROR", err.Error()), 0
+	}
+
+	res := make([]*biz.User, 0)
+	for _, user := range users {
+		res = append(res, &biz.User{
+			ID:            user.ID,
+			Address:       user.Address,
+			Card:          user.Card,
+			CardNumber:    user.CardNumber,
+			CardOrderId:   user.CardOrderId,
+			CardAmount:    user.CardAmount,
+			Amount:        user.Amount,
+			AmountTwo:     user.AmountTwo,
+			MyTotalAmount: user.MyTotalAmount,
+			IsDelete:      user.IsDelete,
+			Vip:           user.Vip,
+			FirstName:     user.FirstName,
+			LastName:      user.LastName,
+			BirthDate:     user.BirthDate,
+			Email:         user.Email,
+			CountryCode:   user.CountryCode,
+			Phone:         user.Phone,
+			City:          user.City,
+			Country:       user.Country,
+			Street:        user.Street,
+			PostalCode:    user.PostalCode,
+			CardUserId:    user.CardUserId,
+			ProductId:     user.ProductId,
+			MaxCardQuota:  user.MaxCardQuota,
+			CreatedAt:     user.CreatedAt,
+			UpdatedAt:     user.UpdatedAt,
+			VipTwo:        user.VipTwo,
+			VipThree:      user.VipThree,
+			CanVip:        user.CanVip,
+			CardTwo:       user.CardTwo,
+			UserCount:     user.UserCount,
+		})
+	}
+	return res, nil, count
+}
+
+// GetAdminByAccount .
+func (u *UserRepo) GetAdminByAccount(ctx context.Context, account string, password string) (*biz.Admin, error) {
+	var admin Admin
+	if err := u.data.db.Where("account=? and password=?", account, password).Table("admin").First(&admin).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.NotFound("ADMIN_NOT_FOUND", "admin not found")
+		}
+
+		return nil, errors.New(500, "ADMIN ERROR", err.Error())
+	}
+
+	return &biz.Admin{
+		ID:       admin.ID,
+		Password: admin.Password,
+		Account:  admin.Account,
+		Type:     admin.Type,
+	}, nil
+}
+
+func (u *UserRepo) SetCanVip(ctx context.Context, userId uint64, lock uint64) (bool, error) {
+	res := u.data.DB(ctx).Table("user").Where("id=?", userId).Updates(map[string]interface{}{"can_vip": lock})
+	if res.Error != nil || 0 >= res.RowsAffected {
+		return false, errors.New(500, "CREATE_USER_ERROR", "用户修改失败")
+	}
+
+	return true, nil
+}
+
+func (u *UserRepo) SetVipThree(ctx context.Context, userId uint64, vipThree uint64) (bool, error) {
+	res := u.data.DB(ctx).Table("user").Where("id=?", userId).Updates(map[string]interface{}{"vip_three": vipThree})
+	if res.Error != nil || 0 >= res.RowsAffected {
+		return false, errors.New(500, "CREATE_USER_ERROR", "用户修改失败")
+	}
+
+	return true, nil
+}
+
+func (u *UserRepo) SetUserCount(ctx context.Context, userId uint64) (bool, error) {
+	res := u.data.DB(ctx).Table("user").Where("id=?", userId).Updates(map[string]interface{}{"user_count": 0})
+	if res.Error != nil || 0 >= res.RowsAffected {
+		return false, errors.New(500, "CREATE_USER_ERROR", "用户修改失败")
+	}
+
+	return true, nil
 }

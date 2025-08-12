@@ -307,6 +307,30 @@ func (u *UserService) AdminWithdrawEth(ctx context.Context, req *pb.AdminWithdra
 	return &pb.AdminWithdrawEthReply{}, nil
 }
 
+func (u *UserService) AdminLogin(ctx context.Context, req *pb.AdminLoginRequest) (*pb.AdminLoginReply, error) {
+	return u.uuc.AdminLogin(ctx, req, u.ca.JwtKey)
+}
+
+func (u *UserService) AdminRewardList(ctx context.Context, req *pb.AdminRewardListRequest) (*pb.AdminRewardListReply, error) {
+	return u.uuc.AdminRewardList(ctx, req)
+}
+
+func (u *UserService) AdminUserList(ctx context.Context, req *pb.AdminUserListRequest) (*pb.AdminUserListReply, error) {
+	return u.uuc.AdminUserList(ctx, req)
+}
+
+func (u *UserService) UpdateCanVip(ctx context.Context, req *pb.UpdateCanVipRequest) (*pb.UpdateCanVipReply, error) {
+	return u.uuc.UpdateCanVip(ctx, req)
+}
+
+func (u *UserService) SetVipThree(ctx context.Context, req *pb.SetVipThreeRequest) (*pb.SetVipThreeReply, error) {
+	return u.uuc.SetVipThree(ctx, req)
+}
+
+func (u *UserService) SetUserCount(ctx context.Context, req *pb.SetUserCountRequest) (*pb.SetUserCountReply, error) {
+	return u.uuc.SetUserCount(ctx, req)
+}
+
 type CallbackRequest struct {
 	Version   string          `json:"version"`
 	EventName string          `json:"eventName"`
