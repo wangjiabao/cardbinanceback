@@ -152,6 +152,8 @@ type UserRepo interface {
 	SetCanVip(ctx context.Context, userId uint64, lock uint64) (bool, error)
 	SetVipThree(ctx context.Context, userId uint64, vipThree uint64) (bool, error)
 	SetUserCount(ctx context.Context, userId uint64) (bool, error)
+	GetConfigs() ([]*Config, error)
+	UpdateConfig(ctx context.Context, id int64, value string) (bool, error)
 }
 
 type UserUseCase struct {
@@ -1054,6 +1056,52 @@ func (uuc *UserUseCase) SetVipThree(ctx context.Context, req *pb.SetVipThreeRequ
 	_, err = uuc.repo.SetVipThree(ctx, req.SendBody.UserId, lock)
 	if nil != err {
 		return res, err
+	}
+
+	return res, nil
+}
+
+func (uuc *UserUseCase) AdminConfigUpdate(ctx context.Context, req *pb.AdminConfigUpdateRequest) (*pb.AdminConfigUpdateReply, error) {
+	var (
+		err error
+	)
+
+	res := &pb.AdminConfigUpdateReply{}
+
+	if err = uuc.tx.ExecTx(ctx, func(ctx context.Context) error { // 事务
+		_, err = uuc.repo.UpdateConfig(ctx, req.SendBody.Id, req.SendBody.Value)
+		if nil != err {
+			return err
+		}
+
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (uuc *UserUseCase) AdminConfig(ctx context.Context, req *pb.AdminConfigRequest) (*pb.AdminConfigReply, error) {
+	var (
+		configs []*Config
+	)
+
+	res := &pb.AdminConfigReply{
+		Config: make([]*pb.AdminConfigReply_List, 0),
+	}
+
+	configs, _ = uuc.repo.GetConfigs()
+	if nil == configs {
+		return res, nil
+	}
+
+	for _, v := range configs {
+		res.Config = append(res.Config, &pb.AdminConfigReply_List{
+			Id:    int64(v.ID),
+			Name:  v.Name,
+			Value: v.Value,
+		})
 	}
 
 	return res, nil

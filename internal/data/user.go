@@ -1194,3 +1194,40 @@ func (u *UserRepo) SetUserCount(ctx context.Context, userId uint64) (bool, error
 
 	return true, nil
 }
+
+// GetConfigs .
+func (u *UserRepo) GetConfigs() ([]*biz.Config, error) {
+	var configs []*Config
+	res := make([]*biz.Config, 0)
+	if err := u.data.db.Table("config").Find(&configs).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.NotFound("CONFIG_NOT_FOUND", "config not found")
+		}
+
+		return nil, errors.New(500, "Config ERROR", err.Error())
+	}
+
+	for _, config := range configs {
+		res = append(res, &biz.Config{
+			ID:      config.ID,
+			KeyName: config.KeyName,
+			Name:    config.Name,
+			Value:   config.Value,
+		})
+	}
+
+	return res, nil
+}
+
+// UpdateConfig .
+func (u *UserRepo) UpdateConfig(ctx context.Context, id int64, value string) (bool, error) {
+	var config Config
+	config.Value = value
+
+	res := u.data.DB(ctx).Table("config").Where("id=?", id).Updates(&config)
+	if res.Error != nil {
+		return false, errors.New(500, "UPDATE_USER_INFO_ERROR", "用户信息修改失败")
+	}
+
+	return true, nil
+}

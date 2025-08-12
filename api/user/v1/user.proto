@@ -79,6 +79,45 @@ service User {
 			body: "send_body"
 		};
 	};
+
+	rpc AdminConfig (AdminConfigRequest) returns (AdminConfigReply) {
+		option (google.api.http) = {
+			get: "/api/admin_dhb/config"
+		};
+	};
+
+	rpc AdminConfigUpdate (AdminConfigUpdateRequest) returns (AdminConfigUpdateReply) {
+		option (google.api.http) = {
+			post: "/api/admin_dhb/config_update"
+			body: "send_body"
+		};
+	};
+}
+
+message AdminConfigUpdateRequest {
+	message SendBody{
+		int64 id = 1;
+		string value = 2;
+	}
+
+	SendBody send_body = 1;
+}
+
+message AdminConfigUpdateReply {
+
+}
+
+message AdminConfigRequest {
+}
+
+message AdminConfigReply {
+	repeated List config = 1;
+	message List {
+		int64 id = 1;
+		string name = 3; // 名称
+		string value = 2; // 值
+	}
+	int64 count = 2;
 }
 
 message SetUserCountRequest {

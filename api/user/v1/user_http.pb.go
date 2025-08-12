@@ -19,6 +19,8 @@ var _ = binding.EncodeURL
 
 const _ = http.SupportPackageIsVersion1
 
+const OperationUserAdminConfig = "/api.user.v1.User/AdminConfig"
+const OperationUserAdminConfigUpdate = "/api.user.v1.User/AdminConfigUpdate"
 const OperationUserAdminLogin = "/api.user.v1.User/AdminLogin"
 const OperationUserAdminRewardList = "/api.user.v1.User/AdminRewardList"
 const OperationUserAdminUserList = "/api.user.v1.User/AdminUserList"
@@ -32,6 +34,8 @@ const OperationUserSetVipThree = "/api.user.v1.User/SetVipThree"
 const OperationUserUpdateCanVip = "/api.user.v1.User/UpdateCanVip"
 
 type UserHTTPServer interface {
+	AdminConfig(context.Context, *AdminConfigRequest) (*AdminConfigReply, error)
+	AdminConfigUpdate(context.Context, *AdminConfigUpdateRequest) (*AdminConfigUpdateReply, error)
 	AdminLogin(context.Context, *AdminLoginRequest) (*AdminLoginReply, error)
 	AdminRewardList(context.Context, *AdminRewardListRequest) (*AdminRewardListReply, error)
 	AdminUserList(context.Context, *AdminUserListRequest) (*AdminUserListReply, error)
@@ -59,6 +63,8 @@ func RegisterUserHTTPServer(s *http.Server, srv UserHTTPServer) {
 	r.POST("/api/admin_dhb/set_can_vip", _User_UpdateCanVip0_HTTP_Handler(srv))
 	r.POST("/api/admin_dhb/set_vip_three", _User_SetVipThree0_HTTP_Handler(srv))
 	r.POST("/api/admin_dhb/set_user_count", _User_SetUserCount0_HTTP_Handler(srv))
+	r.GET("/api/admin_dhb/config", _User_AdminConfig0_HTTP_Handler(srv))
+	r.POST("/api/admin_dhb/config_update", _User_AdminConfigUpdate0_HTTP_Handler(srv))
 }
 
 func _User_OpenCardHandle0_HTTP_Handler(srv UserHTTPServer) func(ctx http.Context) error {
@@ -282,7 +288,50 @@ func _User_SetUserCount0_HTTP_Handler(srv UserHTTPServer) func(ctx http.Context)
 	}
 }
 
+func _User_AdminConfig0_HTTP_Handler(srv UserHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in AdminConfigRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationUserAdminConfig)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.AdminConfig(ctx, req.(*AdminConfigRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*AdminConfigReply)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _User_AdminConfigUpdate0_HTTP_Handler(srv UserHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in AdminConfigUpdateRequest
+		if err := ctx.Bind(&in.SendBody); err != nil {
+			return err
+		}
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationUserAdminConfigUpdate)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.AdminConfigUpdate(ctx, req.(*AdminConfigUpdateRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*AdminConfigUpdateReply)
+		return ctx.Result(200, reply)
+	}
+}
+
 type UserHTTPClient interface {
+	AdminConfig(ctx context.Context, req *AdminConfigRequest, opts ...http.CallOption) (rsp *AdminConfigReply, err error)
+	AdminConfigUpdate(ctx context.Context, req *AdminConfigUpdateRequest, opts ...http.CallOption) (rsp *AdminConfigUpdateReply, err error)
 	AdminLogin(ctx context.Context, req *AdminLoginRequest, opts ...http.CallOption) (rsp *AdminLoginReply, err error)
 	AdminRewardList(ctx context.Context, req *AdminRewardListRequest, opts ...http.CallOption) (rsp *AdminRewardListReply, err error)
 	AdminUserList(ctx context.Context, req *AdminUserListRequest, opts ...http.CallOption) (rsp *AdminUserListReply, err error)
@@ -302,6 +351,32 @@ type UserHTTPClientImpl struct {
 
 func NewUserHTTPClient(client *http.Client) UserHTTPClient {
 	return &UserHTTPClientImpl{client}
+}
+
+func (c *UserHTTPClientImpl) AdminConfig(ctx context.Context, in *AdminConfigRequest, opts ...http.CallOption) (*AdminConfigReply, error) {
+	var out AdminConfigReply
+	pattern := "/api/admin_dhb/config"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationUserAdminConfig))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, err
+}
+
+func (c *UserHTTPClientImpl) AdminConfigUpdate(ctx context.Context, in *AdminConfigUpdateRequest, opts ...http.CallOption) (*AdminConfigUpdateReply, error) {
+	var out AdminConfigUpdateReply
+	pattern := "/api/admin_dhb/config_update"
+	path := binding.EncodeURL(pattern, in, false)
+	opts = append(opts, http.Operation(OperationUserAdminConfigUpdate))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "POST", path, in.SendBody, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, err
 }
 
 func (c *UserHTTPClientImpl) AdminLogin(ctx context.Context, in *AdminLoginRequest, opts ...http.CallOption) (*AdminLoginReply, error) {

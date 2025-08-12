@@ -24,6 +24,48 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Status'
+    /api/admin_dhb/config:
+        get:
+            tags:
+                - User
+            operationId: User_AdminConfig
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/AdminConfigReply'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /api/admin_dhb/config_update:
+        post:
+            tags:
+                - User
+            operationId: User_AdminConfigUpdate
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/AdminConfigUpdateRequest_SendBody'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/AdminConfigUpdateReply'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
     /api/admin_dhb/deposit:
         get:
             tags:
@@ -253,6 +295,34 @@ paths:
                                 $ref: '#/components/schemas/Status'
 components:
     schemas:
+        AdminConfigReply:
+            type: object
+            properties:
+                config:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AdminConfigReply_List'
+                count:
+                    type: string
+        AdminConfigReply_List:
+            type: object
+            properties:
+                id:
+                    type: string
+                name:
+                    type: string
+                value:
+                    type: string
+        AdminConfigUpdateReply:
+            type: object
+            properties: {}
+        AdminConfigUpdateRequest_SendBody:
+            type: object
+            properties:
+                id:
+                    type: string
+                value:
+                    type: string
         AdminLoginReply:
             type: object
             properties:

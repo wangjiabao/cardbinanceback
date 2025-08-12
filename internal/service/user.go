@@ -331,6 +331,14 @@ func (u *UserService) SetUserCount(ctx context.Context, req *pb.SetUserCountRequ
 	return u.uuc.SetUserCount(ctx, req)
 }
 
+func (u *UserService) AdminConfig(ctx context.Context, req *pb.AdminConfigRequest) (*pb.AdminConfigReply, error) {
+	return u.uuc.AdminConfig(ctx, req)
+}
+
+func (u *UserService) AdminConfigUpdate(ctx context.Context, req *pb.AdminConfigUpdateRequest) (*pb.AdminConfigUpdateReply, error) {
+	return u.uuc.AdminConfigUpdate(ctx, req)
+}
+
 type CallbackRequest struct {
 	Version   string          `json:"version"`
 	EventName string          `json:"eventName"`

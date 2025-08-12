@@ -19,17 +19,19 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	User_OpenCardHandle_FullMethodName   = "/api.user.v1.User/OpenCardHandle"
-	User_CardStatusHandle_FullMethodName = "/api.user.v1.User/CardStatusHandle"
-	User_Deposit_FullMethodName          = "/api.user.v1.User/Deposit"
-	User_AdminWithdrawEth_FullMethodName = "/api.user.v1.User/AdminWithdrawEth"
-	User_RewardCardTwo_FullMethodName    = "/api.user.v1.User/RewardCardTwo"
-	User_AdminRewardList_FullMethodName  = "/api.user.v1.User/AdminRewardList"
-	User_AdminUserList_FullMethodName    = "/api.user.v1.User/AdminUserList"
-	User_AdminLogin_FullMethodName       = "/api.user.v1.User/AdminLogin"
-	User_UpdateCanVip_FullMethodName     = "/api.user.v1.User/UpdateCanVip"
-	User_SetVipThree_FullMethodName      = "/api.user.v1.User/SetVipThree"
-	User_SetUserCount_FullMethodName     = "/api.user.v1.User/SetUserCount"
+	User_OpenCardHandle_FullMethodName    = "/api.user.v1.User/OpenCardHandle"
+	User_CardStatusHandle_FullMethodName  = "/api.user.v1.User/CardStatusHandle"
+	User_Deposit_FullMethodName           = "/api.user.v1.User/Deposit"
+	User_AdminWithdrawEth_FullMethodName  = "/api.user.v1.User/AdminWithdrawEth"
+	User_RewardCardTwo_FullMethodName     = "/api.user.v1.User/RewardCardTwo"
+	User_AdminRewardList_FullMethodName   = "/api.user.v1.User/AdminRewardList"
+	User_AdminUserList_FullMethodName     = "/api.user.v1.User/AdminUserList"
+	User_AdminLogin_FullMethodName        = "/api.user.v1.User/AdminLogin"
+	User_UpdateCanVip_FullMethodName      = "/api.user.v1.User/UpdateCanVip"
+	User_SetVipThree_FullMethodName       = "/api.user.v1.User/SetVipThree"
+	User_SetUserCount_FullMethodName      = "/api.user.v1.User/SetUserCount"
+	User_AdminConfig_FullMethodName       = "/api.user.v1.User/AdminConfig"
+	User_AdminConfigUpdate_FullMethodName = "/api.user.v1.User/AdminConfigUpdate"
 )
 
 // UserClient is the client API for User service.
@@ -48,6 +50,8 @@ type UserClient interface {
 	UpdateCanVip(ctx context.Context, in *UpdateCanVipRequest, opts ...grpc.CallOption) (*UpdateCanVipReply, error)
 	SetVipThree(ctx context.Context, in *SetVipThreeRequest, opts ...grpc.CallOption) (*SetVipThreeReply, error)
 	SetUserCount(ctx context.Context, in *SetUserCountRequest, opts ...grpc.CallOption) (*SetUserCountReply, error)
+	AdminConfig(ctx context.Context, in *AdminConfigRequest, opts ...grpc.CallOption) (*AdminConfigReply, error)
+	AdminConfigUpdate(ctx context.Context, in *AdminConfigUpdateRequest, opts ...grpc.CallOption) (*AdminConfigUpdateReply, error)
 }
 
 type userClient struct {
@@ -157,6 +161,24 @@ func (c *userClient) SetUserCount(ctx context.Context, in *SetUserCountRequest, 
 	return out, nil
 }
 
+func (c *userClient) AdminConfig(ctx context.Context, in *AdminConfigRequest, opts ...grpc.CallOption) (*AdminConfigReply, error) {
+	out := new(AdminConfigReply)
+	err := c.cc.Invoke(ctx, User_AdminConfig_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userClient) AdminConfigUpdate(ctx context.Context, in *AdminConfigUpdateRequest, opts ...grpc.CallOption) (*AdminConfigUpdateReply, error) {
+	out := new(AdminConfigUpdateReply)
+	err := c.cc.Invoke(ctx, User_AdminConfigUpdate_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UserServer is the server API for User service.
 // All implementations must embed UnimplementedUserServer
 // for forward compatibility
@@ -173,6 +195,8 @@ type UserServer interface {
 	UpdateCanVip(context.Context, *UpdateCanVipRequest) (*UpdateCanVipReply, error)
 	SetVipThree(context.Context, *SetVipThreeRequest) (*SetVipThreeReply, error)
 	SetUserCount(context.Context, *SetUserCountRequest) (*SetUserCountReply, error)
+	AdminConfig(context.Context, *AdminConfigRequest) (*AdminConfigReply, error)
+	AdminConfigUpdate(context.Context, *AdminConfigUpdateRequest) (*AdminConfigUpdateReply, error)
 	mustEmbedUnimplementedUserServer()
 }
 
@@ -212,6 +236,12 @@ func (UnimplementedUserServer) SetVipThree(context.Context, *SetVipThreeRequest)
 }
 func (UnimplementedUserServer) SetUserCount(context.Context, *SetUserCountRequest) (*SetUserCountReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetUserCount not implemented")
+}
+func (UnimplementedUserServer) AdminConfig(context.Context, *AdminConfigRequest) (*AdminConfigReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AdminConfig not implemented")
+}
+func (UnimplementedUserServer) AdminConfigUpdate(context.Context, *AdminConfigUpdateRequest) (*AdminConfigUpdateReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AdminConfigUpdate not implemented")
 }
 func (UnimplementedUserServer) mustEmbedUnimplementedUserServer() {}
 
@@ -424,6 +454,42 @@ func _User_SetUserCount_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _User_AdminConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AdminConfigRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServer).AdminConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: User_AdminConfig_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServer).AdminConfig(ctx, req.(*AdminConfigRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _User_AdminConfigUpdate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AdminConfigUpdateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServer).AdminConfigUpdate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: User_AdminConfigUpdate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServer).AdminConfigUpdate(ctx, req.(*AdminConfigUpdateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // User_ServiceDesc is the grpc.ServiceDesc for User service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -474,6 +540,14 @@ var User_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetUserCount",
 			Handler:    _User_SetUserCount_Handler,
+		},
+		{
+			MethodName: "AdminConfig",
+			Handler:    _User_AdminConfig_Handler,
+		},
+		{
+			MethodName: "AdminConfigUpdate",
+			Handler:    _User_AdminConfigUpdate_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
