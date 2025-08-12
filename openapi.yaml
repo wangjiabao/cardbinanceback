@@ -61,6 +61,24 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Status'
+    /api/admin_dhb/reward_card_two:
+        get:
+            tags:
+                - User
+            operationId: User_RewardCardTwo
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/RewardCardTwoReply'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
     /api/admin_dhb/withdraw_eth:
         get:
             tags:
@@ -107,6 +125,9 @@ components:
             properties:
                 status:
                     type: string
+        RewardCardTwoReply:
+            type: object
+            properties: {}
         Status:
             type: object
             properties:

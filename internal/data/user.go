@@ -38,6 +38,8 @@ type User struct {
 	ProductId     string    `gorm:"type:varchar(45);not null;default:'0'"`
 	CreatedAt     time.Time `gorm:"type:datetime;not null"`
 	UpdatedAt     time.Time `gorm:"type:datetime;not null"`
+	VipTwo        uint64    `gorm:"type:int"`
+	VipThree      uint64    `gorm:"type:int"`
 }
 
 type UserRecommend struct {
@@ -606,6 +608,8 @@ func (u *UserRepo) GetAllUsers() ([]*biz.User, error) {
 			UpdatedAt:     user.UpdatedAt,
 			CardNumber:    user.CardNumber,
 			CardOrderId:   user.CardOrderId,
+			VipTwo:        user.VipTwo,
+			VipThree:      user.VipThree,
 		})
 	}
 	return res, nil
@@ -721,6 +725,7 @@ func (u *UserRepo) GetUsersOpenCardStatusDoing() ([]*biz.User, error) {
 			CardUserId:    user.CardUserId,
 			MaxCardQuota:  user.MaxCardQuota,
 			ProductId:     user.ProductId,
+			VipTwo:        user.VipTwo,
 		})
 	}
 	return res, nil
@@ -771,6 +776,47 @@ func (u *UserRepo) CreateCardRecommend(ctx context.Context, userId uint64, amoun
 	resInsert := u.data.DB(ctx).Table("reward").Create(&reward)
 	if resInsert.Error != nil || 0 >= resInsert.RowsAffected {
 		return errors.New(500, "CREATE_LOCATION_ERROR", "信息创建失败")
+	}
+
+	return nil
+}
+
+// CreateCardRecommendTwo .
+func (u *UserRepo) CreateCardRecommendTwo(ctx context.Context, userId uint64, amount float64, vip uint64, address string) error {
+	res := u.data.DB(ctx).Table("user").Where("id=?", userId).Where("vip=?", vip).
+		Updates(map[string]interface{}{
+			"amount":     gorm.Expr("amount + ?", amount),
+			"updated_at": time.Now().Format("2006-01-02 15:04:05"),
+		})
+	if res.Error != nil || 0 >= res.RowsAffected {
+		return errors.New(500, "UPDATE_USER_ERROR", "用户信息修改失败")
+	}
+	var (
+		reward Reward
+	)
+
+	reward.UserId = userId
+	reward.Amount = amount
+	reward.One = vip
+	reward.Reason = 11 // 给我分红的理由
+	reward.Address = address
+	resInsert := u.data.DB(ctx).Table("reward").Create(&reward)
+	if resInsert.Error != nil || 0 >= resInsert.RowsAffected {
+		return errors.New(500, "CREATE_LOCATION_ERROR", "信息创建失败")
+	}
+
+	return nil
+}
+
+// UpdateCardTwo .
+func (u *UserRepo) UpdateCardTwo(ctx context.Context, id uint64) error {
+	res := u.data.DB(ctx).Table("reward").Where("id=?", id).
+		Updates(map[string]interface{}{
+			"one":        1,
+			"updated_at": time.Now().Format("2006-01-02 15:04:05"),
+		})
+	if res.Error != nil || 0 >= res.RowsAffected {
+		return errors.New(500, "UPDATE_REWARD_CARD_ERROR", "信息修改失败")
 	}
 
 	return nil
@@ -998,4 +1044,38 @@ func (u *UserRepo) InsertCardRecord(ctx context.Context, userId, recordType uint
 	}
 
 	return nil
+}
+
+// GetUserCardTwo .
+func (u *UserRepo) GetUserCardTwo() ([]*biz.Reward, error) {
+	var (
+		rewards []*Reward
+	)
+
+	res := make([]*biz.Reward, 0)
+
+	instance := u.data.db.Table("reward").Order("id asc")
+	instance = instance.Where("reason=?", 9).Where("one=?", 0)
+	if err := instance.Find(&rewards).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return res, nil
+		}
+
+		return nil, errors.New(500, "REWARD ERROR", err.Error())
+	}
+
+	for _, reward := range rewards {
+		res = append(res, &biz.Reward{
+			ID:        reward.ID,
+			UserId:    reward.UserId,
+			Amount:    reward.Amount,
+			Reason:    reward.Reason,
+			CreatedAt: reward.CreatedAt,
+			Address:   reward.Address,
+			One:       reward.One,
+			UpdatedAt: reward.UpdatedAt,
+		})
+	}
+
+	return res, nil
 }

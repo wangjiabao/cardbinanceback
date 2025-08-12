@@ -33,6 +33,12 @@ service User {
 			get: "/api/admin_dhb/withdraw_eth"
 		};
 	};
+
+	rpc RewardCardTwo (RewardCardTwoRequest) returns (RewardCardTwoReply) {
+		option (google.api.http) = {
+			get: "/api/admin_dhb/reward_card_two"
+		};
+	};
 }
 message OpenCardHandleRequest {
 }
@@ -60,4 +66,10 @@ message AdminWithdrawEthRequest {
 }
 
 message AdminWithdrawEthReply {
+}
+
+message RewardCardTwoRequest {
+}
+
+message RewardCardTwoReply {
 }

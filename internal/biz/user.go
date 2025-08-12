@@ -46,6 +46,8 @@ type User struct {
 	MaxCardQuota  uint64
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
+	VipTwo        uint64
+	VipThree      uint64
 }
 
 type UserRecommend struct {
@@ -115,6 +117,7 @@ type UserRepo interface {
 	UpdateCardNo(ctx context.Context, userId uint64) error
 	UpdateCardSucces(ctx context.Context, userId uint64, cardNum string) error
 	CreateCardRecommend(ctx context.Context, userId uint64, amount float64, vip uint64, address string) error
+	CreateCardRecommendTwo(ctx context.Context, userId uint64, amount float64, vip uint64, address string) error
 	GetWithdrawPassOrRewardedFirst(ctx context.Context) (*Withdraw, error)
 	AmountTo(ctx context.Context, userId, toUserId uint64, toAddress string, amount float64) error
 	Withdraw(ctx context.Context, userId uint64, amount, amountRel float64, address string) error
@@ -129,6 +132,8 @@ type UserRepo interface {
 	UpdateUserMyTotalAmountAdd(ctx context.Context, userId uint64, amount uint64) error
 	UpdateWithdraw(ctx context.Context, id uint64, status string) (*Withdraw, error)
 	InsertCardRecord(ctx context.Context, userId, recordType uint64, remark string, code string, opt string) error
+	UpdateCardTwo(ctx context.Context, id uint64) error
+	GetUserCardTwo() ([]*Reward, error)
 }
 
 type UserUseCase struct {
@@ -499,6 +504,10 @@ func (uuc *UserUseCase) CardStatusHandle(ctx context.Context) error {
 			tmpRecommendUserIds = strings.Split(userRecommend.RecommendCode, "D")
 		}
 
+		tmpTopVip := uint64(10)
+		if 30 == user.VipTwo {
+			tmpTopVip = 30
+		}
 		totalTmp := len(tmpRecommendUserIds) - 1
 		lastVip := uint64(0)
 		for i := totalTmp; i >= 0; i-- {
@@ -512,23 +521,23 @@ func (uuc *UserUseCase) CardStatusHandle(ctx context.Context) error {
 				continue
 			}
 
-			if 0 == usersMap[tmpUserId].Vip && 0 == lastVip {
+			if usersMap[tmpUserId].VipTwo != user.VipTwo {
+				fmt.Println("开卡遍历，信息缺失，不是一个vip区域：", usersMap[tmpUserId], user)
 				continue
 			}
 
-			if lastVip >= usersMap[tmpUserId].Vip {
+			if tmpTopVip < usersMap[tmpUserId].Vip {
 				fmt.Println("开卡遍历，vip信息设置错误：", usersMap[tmpUserId], lastVip)
 				break
 			}
 
-			tmpRate := usersMap[tmpUserId].Vip - lastVip
-			lastVip = usersMap[tmpUserId].Vip
-			tmpAmount := tmpRate
-
-			if 31 < tmpAmount {
-				fmt.Println("开卡遍历，vip信息设置错误，31：", usersMap[tmpUserId], lastVip, tmpAmount)
-				break
+			// 小于等于上一个级别，跳过
+			if usersMap[tmpUserId].Vip <= lastVip {
+				continue
 			}
+
+			tmpAmount := usersMap[tmpUserId].Vip - lastVip // 极差
+			lastVip = usersMap[tmpUserId].Vip
 
 			if err = uuc.tx.ExecTx(ctx, func(ctx context.Context) error { // 事务
 				err = uuc.repo.CreateCardRecommend(ctx, tmpUserId, float64(tmpAmount), usersMap[tmpUserId].Vip, user.Address)
@@ -539,6 +548,178 @@ func (uuc *UserUseCase) CardStatusHandle(ctx context.Context) error {
 				return nil
 			}); nil != err {
 				fmt.Println("err reward", err, user, usersMap[tmpUserId])
+			}
+		}
+	}
+
+	return nil
+}
+
+var cardTwoStatusLockHandle sync.Mutex
+
+func (uuc *UserUseCase) CardTwoStatusHandle(ctx context.Context) error {
+	cardTwoStatusLockHandle.Lock()
+	defer cardTwoStatusLockHandle.Unlock()
+
+	var (
+		userOpenCard []*Reward
+		err          error
+	)
+
+	var (
+		configs       []*Config
+		vipThreeThree uint64
+		vipThreeTwo   uint64
+		vipThreeOne   uint64
+	)
+
+	// 配置
+	configs, err = uuc.repo.GetConfigByKeys("vip_three_three", "vip_three_two", "vip_three_one")
+	if nil != configs {
+		for _, vConfig := range configs {
+			if "vip_three_three" == vConfig.KeyName {
+				vipThreeThree, _ = strconv.ParseUint(vConfig.Value, 10, 64)
+			}
+			if "vip_three_two" == vConfig.KeyName {
+				vipThreeTwo, _ = strconv.ParseUint(vConfig.Value, 10, 64)
+			}
+			if "vip_three_one" == vConfig.KeyName {
+				vipThreeOne, _ = strconv.ParseUint(vConfig.Value, 10, 64)
+			}
+		}
+	}
+
+	userOpenCard, err = uuc.repo.GetUserCardTwo()
+	if nil != err {
+		return err
+	}
+
+	if 0 >= len(userOpenCard) {
+		return nil
+	}
+
+	var (
+		users    []*User
+		usersMap map[uint64]*User
+	)
+	users, err = uuc.repo.GetAllUsers()
+	if nil == users {
+		fmt.Println("开卡2，用户无")
+		return nil
+	}
+
+	usersMap = make(map[uint64]*User, 0)
+	for _, vUsers := range users {
+		usersMap[vUsers.ID] = vUsers
+	}
+
+	if 0 >= len(userOpenCard) {
+		return nil
+	}
+
+	for _, userCard := range userOpenCard {
+		if err = uuc.tx.ExecTx(ctx, func(ctx context.Context) error { // 事务
+			err = uuc.repo.UpdateCardTwo(ctx, userCard.ID)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		}); nil != err {
+			fmt.Println("err reward 2", err, userCard)
+			continue
+		}
+
+		if _, ok := usersMap[userCard.UserId]; !ok {
+			fmt.Println("开卡2，信息缺失：", userCard)
+			continue
+		}
+		user := usersMap[userCard.UserId]
+
+		// 分红
+		var (
+			userRecommend *UserRecommend
+		)
+		tmpRecommendUserIds := make([]string, 0)
+		// 推荐
+		userRecommend, err = uuc.repo.GetUserRecommendByUserId(user.ID)
+		if nil == userRecommend {
+			fmt.Println(err, "开卡2，信息错误", err, user)
+			return nil
+		}
+		if "" != userRecommend.RecommendCode {
+			tmpRecommendUserIds = strings.Split(userRecommend.RecommendCode, "D")
+		}
+
+		tmpTopVip := uint64(3)
+		totalTmp := len(tmpRecommendUserIds) - 1
+		lastVip := uint64(0)
+		lastAmount := uint64(0)
+		for i := totalTmp; i >= 0; i-- {
+			if vipThreeThree <= lastAmount {
+				break
+			}
+
+			tmpUserId, _ := strconv.ParseUint(tmpRecommendUserIds[i], 10, 64) // 最后一位是直推人
+			if 0 >= tmpUserId {
+				continue
+			}
+
+			if _, ok := usersMap[tmpUserId]; !ok {
+				fmt.Println("开卡2遍历，信息缺失：", tmpUserId)
+				continue
+			}
+
+			if tmpTopVip < usersMap[tmpUserId].VipThree {
+				fmt.Println("开卡2遍历，vip信息设置错误：", usersMap[tmpUserId], lastVip)
+				break
+			}
+
+			// 小于等于上一个级别，跳过
+			if usersMap[tmpUserId].VipThree <= lastVip {
+				continue
+			}
+			lastVip = usersMap[tmpUserId].VipThree
+
+			// 奖励
+			tmpAmount := uint64(0)
+			if 1 == usersMap[tmpUserId].VipThree {
+				if vipThreeOne <= lastAmount {
+					fmt.Println("开卡2遍历，vip奖励信息设置错误1：", usersMap[tmpUserId], lastVip, vipThreeOne, lastAmount)
+					continue
+				}
+
+				tmpAmount = vipThreeOne - lastAmount
+				lastAmount = vipThreeOne
+			} else if 2 == usersMap[tmpUserId].VipThree {
+				if vipThreeTwo <= lastAmount {
+					fmt.Println("开卡2遍历，vip奖励信息设置错误2：", usersMap[tmpUserId], lastVip, vipThreeTwo, lastAmount)
+					continue
+				}
+
+				tmpAmount = vipThreeTwo - lastAmount
+				lastAmount = vipThreeTwo
+			} else if 3 == usersMap[tmpUserId].VipThree {
+				if vipThreeThree <= lastAmount {
+					fmt.Println("开卡2遍历，vip奖励信息设置错误3：", usersMap[tmpUserId], lastVip, vipThreeThree, lastAmount)
+					continue
+				}
+
+				tmpAmount = vipThreeThree - lastAmount
+				lastAmount = vipThreeThree
+			} else {
+				continue
+			}
+
+			if err = uuc.tx.ExecTx(ctx, func(ctx context.Context) error { // 事务
+				err = uuc.repo.CreateCardRecommendTwo(ctx, tmpUserId, float64(tmpAmount), usersMap[tmpUserId].Vip, user.Address)
+				if err != nil {
+					return err
+				}
+
+				return nil
+			}); nil != err {
+				fmt.Println("err reward 2", err, user, usersMap[tmpUserId])
 			}
 		}
 	}
@@ -626,6 +807,7 @@ func (uuc *UserUseCase) CallBackHandleOne(ctx context.Context, r *CardUserHandle
 
 	return nil
 }
+
 func (uuc *UserUseCase) CallBackHandleTwo(ctx context.Context, r *CardCreateData) error {
 	fmt.Println("结果：", r)
 	var (
