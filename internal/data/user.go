@@ -915,7 +915,11 @@ func (u *UserRepo) GetUserRewardByUserIdPage(ctx context.Context, b *biz.Paginat
 
 	res := make([]*biz.Reward, 0)
 
-	instance := u.data.db.Where("user_id", userId).Table("reward").Order("id desc")
+	instance := u.data.db.Table("reward").Order("id desc")
+	if 0 < userId {
+		instance = instance.Where("user_id", userId)
+	}
+
 	if 0 < reason {
 		instance = instance.Where("reason=?", reason)
 	}
