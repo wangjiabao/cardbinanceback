@@ -1170,7 +1170,7 @@ func (u *UserRepo) GetAdminByAccount(ctx context.Context, account string, passwo
 
 func (u *UserRepo) SetCanVip(ctx context.Context, userId uint64, lock uint64) (bool, error) {
 	res := u.data.DB(ctx).Table("user").Where("id=?", userId).Updates(map[string]interface{}{"can_vip": lock})
-	if res.Error != nil || 0 >= res.RowsAffected {
+	if res.Error != nil {
 		return false, errors.New(500, "CREATE_USER_ERROR", "用户修改失败")
 	}
 
@@ -1179,7 +1179,7 @@ func (u *UserRepo) SetCanVip(ctx context.Context, userId uint64, lock uint64) (b
 
 func (u *UserRepo) SetVipThree(ctx context.Context, userId uint64, vipThree uint64) (bool, error) {
 	res := u.data.DB(ctx).Table("user").Where("id=?", userId).Updates(map[string]interface{}{"vip_three": vipThree})
-	if res.Error != nil || 0 >= res.RowsAffected {
+	if res.Error != nil {
 		return false, errors.New(500, "CREATE_USER_ERROR", "用户修改失败")
 	}
 
@@ -1188,7 +1188,7 @@ func (u *UserRepo) SetVipThree(ctx context.Context, userId uint64, vipThree uint
 
 func (u *UserRepo) SetUserCount(ctx context.Context, userId uint64) (bool, error) {
 	res := u.data.DB(ctx).Table("user").Where("id=?", userId).Updates(map[string]interface{}{"user_count": 0})
-	if res.Error != nil || 0 >= res.RowsAffected {
+	if res.Error != nil {
 		return false, errors.New(500, "CREATE_USER_ERROR", "用户修改失败")
 	}
 
