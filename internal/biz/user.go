@@ -127,7 +127,7 @@ type UserRepo interface {
 	CreateCard(ctx context.Context, userId uint64, user *User) error
 	GetAllUsers() ([]*User, error)
 	UpdateCard(ctx context.Context, userId uint64, cardOrderId, card string) error
-	UpdateCardNo(ctx context.Context, userId uint64) error
+	UpdateCardNo(ctx context.Context, userId uint64, amount float64) error
 	UpdateCardSucces(ctx context.Context, userId uint64, cardNum string) error
 	CreateCardRecommend(ctx context.Context, userId uint64, amount float64, vip uint64, address string) error
 	CreateCardRecommendTwo(ctx context.Context, userId uint64, amount float64, vip uint64, address string) error
@@ -366,7 +366,11 @@ func (uuc *UserUseCase) OpenCardHandle(ctx context.Context) error {
 
 		if !openRes {
 			fmt.Println("回滚了用户", user)
-			err = uuc.backCard(ctx, user.ID)
+			backAmount := float64(10)
+			if 0 < user.VipTwo {
+				backAmount = float64(30)
+			}
+			err = uuc.backCard(ctx, user.ID, backAmount)
 			if nil != err {
 				fmt.Println("回滚了用户失败", user, err)
 			}
@@ -391,7 +395,11 @@ func (uuc *UserUseCase) OpenCardHandle(ctx context.Context) error {
 			continue
 		} else {
 			fmt.Println(user, err, "持卡人创建失败", resHolder)
-			err = uuc.backCard(ctx, user.ID)
+			backAmount := float64(10)
+			if 0 < user.VipTwo {
+				backAmount = float64(30)
+			}
+			err = uuc.backCard(ctx, user.ID, backAmount)
 			if nil != err {
 				fmt.Println("回滚了用户失败", user, err)
 			}
@@ -401,7 +409,11 @@ func (uuc *UserUseCase) OpenCardHandle(ctx context.Context) error {
 		resCreatCard, err = CreateCardRequestWithSign(0, holderId, productIdUseInt64)
 		if nil == resCreatCard || 200 != resCreatCard.Code || err != nil {
 			fmt.Println("开卡订单创建失败", user, resCreatCard, err)
-			err = uuc.backCard(ctx, user.ID)
+			backAmount := float64(10)
+			if 0 < user.VipTwo {
+				backAmount = float64(30)
+			}
+			err = uuc.backCard(ctx, user.ID, backAmount)
 			if nil != err {
 				fmt.Println("回滚了用户失败", user, err)
 			}
@@ -411,7 +423,11 @@ func (uuc *UserUseCase) OpenCardHandle(ctx context.Context) error {
 
 		if 0 >= len(resCreatCard.Data.CardID) || 0 >= len(resCreatCard.Data.CardOrderID) {
 			fmt.Println("开卡订单信息错误", resCreatCard, err)
-			err = uuc.backCard(ctx, user.ID)
+			backAmount := float64(10)
+			if 0 < user.VipTwo {
+				backAmount = float64(30)
+			}
+			err = uuc.backCard(ctx, user.ID, backAmount)
 			if nil != err {
 				fmt.Println("回滚了用户失败", user, err)
 			}
@@ -502,7 +518,11 @@ func (uuc *UserUseCase) CardStatusHandle(ctx context.Context) error {
 			continue
 		} else {
 			fmt.Println("开卡状态，失败：", resCard, user.ID)
-			err = uuc.backCard(ctx, user.ID)
+			backAmount := float64(10)
+			if 0 < user.VipTwo {
+				backAmount = float64(30)
+			}
+			err = uuc.backCard(ctx, user.ID, backAmount)
 			if nil != err {
 				fmt.Println("回滚了用户失败", user, err)
 			}
@@ -747,12 +767,12 @@ func (uuc *UserUseCase) CardTwoStatusHandle(ctx context.Context) error {
 	return nil
 }
 
-func (uuc *UserUseCase) backCard(ctx context.Context, userId uint64) error {
+func (uuc *UserUseCase) backCard(ctx context.Context, userId uint64, amount float64) error {
 	var (
 		err error
 	)
 	if err = uuc.tx.ExecTx(ctx, func(ctx context.Context) error { // 事务
-		err = uuc.repo.UpdateCardNo(ctx, userId)
+		err = uuc.repo.UpdateCardNo(ctx, userId, amount)
 		if err != nil {
 			return err
 		}

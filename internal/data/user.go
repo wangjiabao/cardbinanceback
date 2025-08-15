@@ -550,12 +550,12 @@ func (u *UserRepo) UpdateCard(ctx context.Context, userId uint64, cardOrderId, c
 }
 
 // UpdateCardNo .
-func (u *UserRepo) UpdateCardNo(ctx context.Context, userId uint64) error {
+func (u *UserRepo) UpdateCardNo(ctx context.Context, userId uint64, amount float64) error {
 	res := u.data.DB(ctx).Table("user").Where("id=?", userId).
 		Updates(map[string]interface{}{
 			"card_order_id": "no",
 			"card":          "no",
-			"amount":        gorm.Expr("amount + ?", 10),
+			"amount":        gorm.Expr("amount + ?", amount),
 			"updated_at":    time.Now().Format("2006-01-02 15:04:05"),
 		})
 	if res.Error != nil || 0 >= res.RowsAffected {
@@ -689,6 +689,7 @@ func (u *UserRepo) GetUsersOpenCard() ([]*biz.User, error) {
 			CardUserId:    user.CardUserId,
 			MaxCardQuota:  user.MaxCardQuota,
 			ProductId:     user.ProductId,
+			VipTwo:        user.VipTwo,
 		})
 	}
 	return res, nil
