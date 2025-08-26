@@ -852,9 +852,10 @@ func (uuc *UserUseCase) AdminRewardList(ctx context.Context, req *pb.AdminReward
 	// 地址查询
 	if "" != req.Address {
 		userSearch, err = uuc.repo.GetUserByAddress(req.Address)
-		if nil != err {
+		if nil != err || nil == userSearch {
 			return res, nil
 		}
+
 		userId = userSearch.ID
 	}
 
