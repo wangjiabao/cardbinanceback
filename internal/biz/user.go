@@ -1230,109 +1230,47 @@ func (uuc *UserUseCase) CallBackHandleThree(ctx context.Context, r *RechargeData
 }
 
 func GenerateSign(params map[string]interface{}, signKey string) string {
-	// 1. 排除 sign 字段 + 排除空值（建议加上，和文档一致）
+	// 1. 排除 sign 字段
 	var keys []string
-	for k, v := range params {
-		if k == "sign" || isEmptyForSign(v) {
-			continue
+	for k := range params {
+		if k != "sign" {
+			keys = append(keys, k)
 		}
-		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 
-	// 2. 拼接 signKey + key + value
+	// 2. 拼接 key + value 字符串
 	var sb strings.Builder
 	sb.WriteString(signKey)
 
 	for _, k := range keys {
 		sb.WriteString(k)
-		sb.WriteString(stableValue(params[k]))
+		value := params[k]
+
+		var strValue string
+		switch v := value.(type) {
+		case string:
+			strValue = v
+		case float64, int, int64, bool:
+			strValue = fmt.Sprintf("%v", v)
+		default:
+			// map、slice 等复杂类型用 JSON 编码
+			jsonBytes, err := json.Marshal(v)
+			if err != nil {
+				strValue = ""
+			} else {
+				strValue = string(jsonBytes)
+			}
+		}
+		sb.WriteString(strValue)
 	}
 
 	signString := sb.String()
-	// fmt.Println("md5前字符串:", signString)
+	//fmt.Println("md5前字符串", signString)
 
+	// 3. 进行 MD5 加密
 	hash := md5.Sum([]byte(signString))
 	return hex.EncodeToString(hash[:])
-}
-
-// ---- 关键：稳定编码 value（map 递归排序；slice 保持顺序；空值可过滤） ----
-
-func isEmptyForSign(v interface{}) bool {
-	if v == nil {
-		return true
-	}
-	switch x := v.(type) {
-	case string:
-		return x == ""
-	case []string:
-		return len(x) == 0
-	case []interface{}:
-		return len(x) == 0
-	case map[string]interface{}:
-		// map 为空视为“空值”
-		return len(x) == 0
-	default:
-		return false
-	}
-}
-
-func stableValue(v interface{}) string {
-	switch x := v.(type) {
-	case string:
-		return x
-	case bool:
-		if x {
-			return "true"
-		}
-		return "false"
-
-	// 你的 cardAmount/cardholderId/cardProductId 是 uint64，现在会走 default -> json.Marshal
-	// 这里把常见整型全接住，避免任何潜在格式差异
-	case int, int8, int16, int32, int64,
-		uint, uint8, uint16, uint32, uint64,
-		float32, float64:
-		return fmt.Sprintf("%v", x)
-
-	case map[string]interface{}:
-		return stableJSONMap(x) // ⭐️核心：map 按 key 排序
-
-	case []string, []interface{}:
-		// slice 顺序稳定，直接 json
-		b, _ := json.Marshal(x)
-		return string(b)
-
-	default:
-		b, _ := json.Marshal(x)
-		return string(b)
-	}
-}
-
-func stableJSONMap(m map[string]interface{}) string {
-	ks := make([]string, 0, len(m))
-	for k, v := range m {
-		if k == "sign" || isEmptyForSign(v) {
-			continue
-		}
-		ks = append(ks, k)
-	}
-	sort.Strings(ks)
-
-	var sb strings.Builder
-	sb.WriteString("{")
-	for i, k := range ks {
-		if i > 0 {
-			sb.WriteString(",")
-		}
-		// key
-		kb, _ := json.Marshal(k)
-		sb.Write(kb)
-		sb.WriteString(":")
-		// value（递归稳定）
-		sb.WriteString(stableValue(m[k]))
-	}
-	sb.WriteString("}")
-	return sb.String()
 }
 
 type CreateCardResponse struct {
@@ -1352,20 +1290,27 @@ func CreateCardRequestWithSign(cardAmount uint64, cardholderId uint64, cardProdu
 	//url := "https://www.ispay.com/prod-api/vcc/api/v1/cards/create"
 	baseUrl := "http://120.79.173.55:9102/prod-api/vcc/api/v1/cards/create"
 
+	//reqBody := map[string]interface{}{
+	//	"merchantId":    "322338",
+	//	"cardCurrency":  "USD",
+	//	"cardAmount":    cardAmount,
+	//	"cardholderId":  cardholderId,
+	//	"cardProductId": cardProductId,
+	//	"cardSpendRule": map[string]interface{}{
+	//		"dailyLimit":   250000,
+	//		"monthlyLimit": 1000000,
+	//	},
+	//	"cardRiskControl": map[string]interface{}{
+	//		"allowedMerchants": []string{"ONLINE"},
+	//		"blockedCountries": []string{},
+	//	},
+	//}
+
 	reqBody := map[string]interface{}{
 		"merchantId":    "322338",
 		"cardCurrency":  "USD",
-		"cardAmount":    cardAmount,
-		"cardholderId":  cardholderId,
-		"cardProductId": cardProductId,
-		"cardSpendRule": map[string]interface{}{
-			"dailyLimit":   250000,
-			"monthlyLimit": 1000000,
-		},
-		"cardRiskControl": map[string]interface{}{
-			"allowedMerchants": []string{"ONLINE"},
-			"blockedCountries": []string{},
-		},
+		"cardProductId": cardProductId, // uint64
+		"cardholderId":  cardholderId,  // uint64
 	}
 
 	sign := GenerateSign(reqBody, "j4gqNRcpTDJr50AP2xd9obKWZIKWbeo9")
