@@ -1290,27 +1290,20 @@ func CreateCardRequestWithSign(cardAmount uint64, cardholderId uint64, cardProdu
 	//url := "https://www.ispay.com/prod-api/vcc/api/v1/cards/create"
 	baseUrl := "http://120.79.173.55:9102/prod-api/vcc/api/v1/cards/create"
 
-	//reqBody := map[string]interface{}{
-	//	"merchantId":    "322338",
-	//	"cardCurrency":  "USD",
-	//	"cardAmount":    cardAmount,
-	//	"cardholderId":  cardholderId,
-	//	"cardProductId": cardProductId,
-	//	"cardSpendRule": map[string]interface{}{
-	//		"dailyLimit":   250000,
-	//		"monthlyLimit": 1000000,
-	//	},
-	//	"cardRiskControl": map[string]interface{}{
-	//		"allowedMerchants": []string{"ONLINE"},
-	//		"blockedCountries": []string{},
-	//	},
-	//}
-
 	reqBody := map[string]interface{}{
 		"merchantId":    "322338",
 		"cardCurrency":  "USD",
-		"cardProductId": cardProductId, // uint64
-		"cardholderId":  cardholderId,  // uint64
+		"cardAmount":    cardAmount,
+		"cardholderId":  cardholderId,
+		"cardProductId": cardProductId,
+		"cardSpendRule": map[string]interface{}{
+			"dailyLimit":   250000,
+			"monthlyLimit": 1000000,
+		},
+		//"cardRiskControl": map[string]interface{}{
+		//	"allowedMerchants": []string{"ONLINE"},
+		//	"blockedCountries": []string{},
+		//},
 	}
 
 	sign := GenerateSign(reqBody, "j4gqNRcpTDJr50AP2xd9obKWZIKWbeo9")
