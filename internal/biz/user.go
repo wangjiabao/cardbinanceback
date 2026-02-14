@@ -389,16 +389,14 @@ func (uuc *UserUseCase) OpenCardHandle(ctx context.Context) error {
 			continue
 		}
 
-		if "active" == resHolder.Data.Status {
+		if "ACTIVE" == resHolder.Data.Status {
 
-		} else if "pending" == resHolder.Data.Status {
+		} else if "PENDING" == resHolder.Data.Status {
 			continue
 		} else {
 			fmt.Println(user, err, "持卡人创建失败", resHolder)
-			backAmount := float64(10)
-			if 0 < user.VipTwo {
-				backAmount = float64(30)
-			}
+			backAmount := float64(15)
+
 			err = uuc.backCard(ctx, user.ID, backAmount)
 			if nil != err {
 				fmt.Println("回滚了用户失败", user, err)
