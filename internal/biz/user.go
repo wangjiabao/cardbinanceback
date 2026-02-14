@@ -1173,7 +1173,7 @@ func (uuc *UserUseCase) CallBackHandleOne(ctx context.Context, r *CardUserHandle
 		err  error
 	)
 	user, err = uuc.repo.GetUserByCardUserId(r.HolderId)
-	if nil != err {
+	if nil == user || nil != err {
 		fmt.Println("回调，不存在用户", r, err)
 		return nil
 	}
@@ -1194,7 +1194,7 @@ func (uuc *UserUseCase) CallBackHandleTwo(ctx context.Context, r *CardCreateData
 		err  error
 	)
 	user, err = uuc.repo.GetUserByCard(r.CardId)
-	if nil != err {
+	if nil == user || nil != err {
 		fmt.Println("回调，不存在用户", r, err)
 		return nil
 	}
@@ -1215,7 +1215,7 @@ func (uuc *UserUseCase) CallBackHandleThree(ctx context.Context, r *RechargeData
 		err  error
 	)
 	user, err = uuc.repo.GetUserByCard(r.CardId)
-	if nil != err {
+	if nil == user || nil != err {
 		fmt.Println("回调，不存在用户", r, err)
 		return nil
 	}
