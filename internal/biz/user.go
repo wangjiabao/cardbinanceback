@@ -534,10 +534,7 @@ func (uuc *UserUseCase) CardStatusHandle(ctx context.Context) error {
 			tmpRecommendUserIds = strings.Split(userRecommend.RecommendCode, "D")
 		}
 
-		tmpTopVip := uint64(10)
-		if 30 == user.VipTwo {
-			tmpTopVip = 30
-		}
+		tmpTopVip := uint64(15)
 		totalTmp := len(tmpRecommendUserIds) - 1
 		lastVip := uint64(0)
 		for i := totalTmp; i >= 0; i-- {
@@ -548,11 +545,6 @@ func (uuc *UserUseCase) CardStatusHandle(ctx context.Context) error {
 
 			if _, ok := usersMap[tmpUserId]; !ok {
 				fmt.Println("开卡遍历，信息缺失：", tmpUserId)
-				continue
-			}
-
-			if usersMap[tmpUserId].VipTwo != user.VipTwo {
-				fmt.Println("开卡遍历，信息缺失，不是一个vip区域：", usersMap[tmpUserId], user)
 				continue
 			}
 
