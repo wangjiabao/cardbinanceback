@@ -631,7 +631,7 @@ func (uuc *UserUseCase) OpenCardTwoHandle(ctx context.Context) error {
 		}
 
 		if err = uuc.tx.ExecTx(ctx, func(ctx context.Context) error { // 事务
-			err = uuc.repo.UpdateCardTwoNew(ctx, user.ID, strconv.FormatUint(resCreatCard.Data.CardID, 10))
+			err = uuc.repo.UpdateCardTwoNew(ctx, user.ID, resCreatCard.Data.CardID)
 			if nil != err {
 				return err
 			}
@@ -2010,7 +2010,7 @@ type AssignCardResponse struct {
 	Code int    `json:"code"`
 	Msg  string `json:"msg"`
 	Data struct {
-		CardID     uint64 `json:"cardId"`
+		CardID     string `json:"cardId"`
 		CardStatus string `json:"cardStatus"`
 		CreateTime string `json:"createTime"`
 	} `json:"data"`
