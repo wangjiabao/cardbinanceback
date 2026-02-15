@@ -558,7 +558,7 @@ func (u *UserRepo) UpdateCard(ctx context.Context, userId uint64, cardOrderId, c
 func (u *UserRepo) UpdateCardTwoNew(ctx context.Context, userId uint64, card string) error {
 	res := u.data.DB(ctx).Table("user").Where("id=?", userId).Where("card_two=?", 1).
 		Updates(map[string]interface{}{
-			"card_two":    2,
+			"card_two":    3,
 			"card_id_two": card,
 			"updated_at":  time.Now().Format("2006-01-02 15:04:05"),
 		})
@@ -864,7 +864,7 @@ func (u *UserRepo) GetUsersOpenCardStatusDoingTwo() ([]*biz.User, error) {
 	var users []*User
 
 	res := make([]*biz.User, 0)
-	if err := u.data.db.Table("user").Where("card_two=?", 2).Order("id asc").Find(&users).Error; err != nil {
+	if err := u.data.db.Table("user").Where("card_two=?", 3).Order("id asc").Find(&users).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return res, nil
 		}
