@@ -902,6 +902,7 @@ func (u *UserRepo) GetUsersOpenCardStatusDoingTwo() ([]*biz.User, error) {
 			ProductId:     user.ProductId,
 			VipTwo:        user.VipTwo,
 			CardIdTwo:     user.CardIdTwo,
+			CardType:      user.CardType,
 		})
 	}
 	return res, nil
