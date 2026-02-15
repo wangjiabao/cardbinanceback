@@ -588,7 +588,37 @@ func (u *UserRepo) UpdateCardNo(ctx context.Context, userId uint64, amount float
 
 	reward.UserId = userId
 	reward.Amount = 10
-	reward.Reason = 7 // 给我分红的理由
+	reward.Reason = 177 // 给我分红的理由
+	resInsert := u.data.DB(ctx).Table("reward").Create(&reward)
+	if resInsert.Error != nil || 0 >= resInsert.RowsAffected {
+		return errors.New(500, "CREATE_LOCATION_ERROR", "信息创建失败")
+	}
+
+	return nil
+}
+
+// UpdateCardNoTwo .
+func (u *UserRepo) UpdateCardNoTwo(ctx context.Context, userId uint64, amount float64) error {
+	res := u.data.DB(ctx).Table("user").Where("id=?", userId).
+		Updates(map[string]interface{}{
+			"card_id_two":     "no",
+			"card_number_two": "no",
+			"card_two":        0,
+			"card_type":       0,
+			"amount":          gorm.Expr("amount + ?", amount),
+			"updated_at":      time.Now().Format("2006-01-02 15:04:05"),
+		})
+	if res.Error != nil || 0 >= res.RowsAffected {
+		return errors.New(500, "UPDATE_USER_ERROR", "用户信息修改失败")
+	}
+
+	var (
+		reward Reward
+	)
+
+	reward.UserId = userId
+	reward.Amount = 10
+	reward.Reason = 17 // 给我分红的理由
 	resInsert := u.data.DB(ctx).Table("reward").Create(&reward)
 	if resInsert.Error != nil || 0 >= resInsert.RowsAffected {
 		return errors.New(500, "CREATE_LOCATION_ERROR", "信息创建失败")
