@@ -558,7 +558,7 @@ func (u *UserRepo) UpdateCard(ctx context.Context, userId uint64, cardOrderId, c
 func (u *UserRepo) UpdateCardTwoNew(ctx context.Context, userId uint64, card string) error {
 	res := u.data.DB(ctx).Table("user").Where("id=?", userId).Where("card_two=?", 1).
 		Updates(map[string]interface{}{
-			"card_two":    3,
+			"card_two":    2,
 			"card_id_two": card,
 			"updated_at":  time.Now().Format("2006-01-02 15:04:05"),
 		})
@@ -645,7 +645,7 @@ func (u *UserRepo) UpdateCardSucces(ctx context.Context, userId uint64, cardNum 
 func (u *UserRepo) UpdateCardSuccessTwo(ctx context.Context, userId uint64) error {
 	res := u.data.DB(ctx).Table("user").Where("id=?", userId).
 		Updates(map[string]interface{}{
-			"card_two":   3,
+			"card_two":   4,
 			"updated_at": time.Now().Format("2006-01-02 15:04:05"),
 		})
 	if res.Error != nil || 0 >= res.RowsAffected {
