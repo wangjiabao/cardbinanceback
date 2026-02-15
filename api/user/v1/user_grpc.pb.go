@@ -19,19 +19,21 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	User_OpenCardHandle_FullMethodName    = "/api.user.v1.User/OpenCardHandle"
-	User_CardStatusHandle_FullMethodName  = "/api.user.v1.User/CardStatusHandle"
-	User_Deposit_FullMethodName           = "/api.user.v1.User/Deposit"
-	User_AdminWithdrawEth_FullMethodName  = "/api.user.v1.User/AdminWithdrawEth"
-	User_RewardCardTwo_FullMethodName     = "/api.user.v1.User/RewardCardTwo"
-	User_AdminRewardList_FullMethodName   = "/api.user.v1.User/AdminRewardList"
-	User_AdminUserList_FullMethodName     = "/api.user.v1.User/AdminUserList"
-	User_AdminLogin_FullMethodName        = "/api.user.v1.User/AdminLogin"
-	User_UpdateCanVip_FullMethodName      = "/api.user.v1.User/UpdateCanVip"
-	User_SetVipThree_FullMethodName       = "/api.user.v1.User/SetVipThree"
-	User_SetUserCount_FullMethodName      = "/api.user.v1.User/SetUserCount"
-	User_AdminConfig_FullMethodName       = "/api.user.v1.User/AdminConfig"
-	User_AdminConfigUpdate_FullMethodName = "/api.user.v1.User/AdminConfigUpdate"
+	User_OpenCardHandle_FullMethodName      = "/api.user.v1.User/OpenCardHandle"
+	User_OpenCardTwoHandle_FullMethodName   = "/api.user.v1.User/OpenCardTwoHandle"
+	User_CardStatusHandle_FullMethodName    = "/api.user.v1.User/CardStatusHandle"
+	User_CardStatusHandleTwo_FullMethodName = "/api.user.v1.User/CardStatusHandleTwo"
+	User_Deposit_FullMethodName             = "/api.user.v1.User/Deposit"
+	User_AdminWithdrawEth_FullMethodName    = "/api.user.v1.User/AdminWithdrawEth"
+	User_RewardCardTwo_FullMethodName       = "/api.user.v1.User/RewardCardTwo"
+	User_AdminRewardList_FullMethodName     = "/api.user.v1.User/AdminRewardList"
+	User_AdminUserList_FullMethodName       = "/api.user.v1.User/AdminUserList"
+	User_AdminLogin_FullMethodName          = "/api.user.v1.User/AdminLogin"
+	User_UpdateCanVip_FullMethodName        = "/api.user.v1.User/UpdateCanVip"
+	User_SetVipThree_FullMethodName         = "/api.user.v1.User/SetVipThree"
+	User_SetUserCount_FullMethodName        = "/api.user.v1.User/SetUserCount"
+	User_AdminConfig_FullMethodName         = "/api.user.v1.User/AdminConfig"
+	User_AdminConfigUpdate_FullMethodName   = "/api.user.v1.User/AdminConfigUpdate"
 )
 
 // UserClient is the client API for User service.
@@ -40,7 +42,9 @@ const (
 type UserClient interface {
 	// 开卡
 	OpenCardHandle(ctx context.Context, in *OpenCardHandleRequest, opts ...grpc.CallOption) (*OpenCardHandleReply, error)
+	OpenCardTwoHandle(ctx context.Context, in *OpenCardHandleRequest, opts ...grpc.CallOption) (*OpenCardHandleReply, error)
 	CardStatusHandle(ctx context.Context, in *CardStatusHandleRequest, opts ...grpc.CallOption) (*CardStatusHandleReply, error)
+	CardStatusHandleTwo(ctx context.Context, in *CardStatusHandleRequest, opts ...grpc.CallOption) (*CardStatusHandleReply, error)
 	Deposit(ctx context.Context, in *DepositRequest, opts ...grpc.CallOption) (*DepositReply, error)
 	AdminWithdrawEth(ctx context.Context, in *AdminWithdrawEthRequest, opts ...grpc.CallOption) (*AdminWithdrawEthReply, error)
 	RewardCardTwo(ctx context.Context, in *RewardCardTwoRequest, opts ...grpc.CallOption) (*RewardCardTwoReply, error)
@@ -71,9 +75,27 @@ func (c *userClient) OpenCardHandle(ctx context.Context, in *OpenCardHandleReque
 	return out, nil
 }
 
+func (c *userClient) OpenCardTwoHandle(ctx context.Context, in *OpenCardHandleRequest, opts ...grpc.CallOption) (*OpenCardHandleReply, error) {
+	out := new(OpenCardHandleReply)
+	err := c.cc.Invoke(ctx, User_OpenCardTwoHandle_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *userClient) CardStatusHandle(ctx context.Context, in *CardStatusHandleRequest, opts ...grpc.CallOption) (*CardStatusHandleReply, error) {
 	out := new(CardStatusHandleReply)
 	err := c.cc.Invoke(ctx, User_CardStatusHandle_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userClient) CardStatusHandleTwo(ctx context.Context, in *CardStatusHandleRequest, opts ...grpc.CallOption) (*CardStatusHandleReply, error) {
+	out := new(CardStatusHandleReply)
+	err := c.cc.Invoke(ctx, User_CardStatusHandleTwo_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +207,9 @@ func (c *userClient) AdminConfigUpdate(ctx context.Context, in *AdminConfigUpdat
 type UserServer interface {
 	// 开卡
 	OpenCardHandle(context.Context, *OpenCardHandleRequest) (*OpenCardHandleReply, error)
+	OpenCardTwoHandle(context.Context, *OpenCardHandleRequest) (*OpenCardHandleReply, error)
 	CardStatusHandle(context.Context, *CardStatusHandleRequest) (*CardStatusHandleReply, error)
+	CardStatusHandleTwo(context.Context, *CardStatusHandleRequest) (*CardStatusHandleReply, error)
 	Deposit(context.Context, *DepositRequest) (*DepositReply, error)
 	AdminWithdrawEth(context.Context, *AdminWithdrawEthRequest) (*AdminWithdrawEthReply, error)
 	RewardCardTwo(context.Context, *RewardCardTwoRequest) (*RewardCardTwoReply, error)
@@ -207,8 +231,14 @@ type UnimplementedUserServer struct {
 func (UnimplementedUserServer) OpenCardHandle(context.Context, *OpenCardHandleRequest) (*OpenCardHandleReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method OpenCardHandle not implemented")
 }
+func (UnimplementedUserServer) OpenCardTwoHandle(context.Context, *OpenCardHandleRequest) (*OpenCardHandleReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method OpenCardTwoHandle not implemented")
+}
 func (UnimplementedUserServer) CardStatusHandle(context.Context, *CardStatusHandleRequest) (*CardStatusHandleReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CardStatusHandle not implemented")
+}
+func (UnimplementedUserServer) CardStatusHandleTwo(context.Context, *CardStatusHandleRequest) (*CardStatusHandleReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CardStatusHandleTwo not implemented")
 }
 func (UnimplementedUserServer) Deposit(context.Context, *DepositRequest) (*DepositReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Deposit not implemented")
@@ -274,6 +304,24 @@ func _User_OpenCardHandle_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _User_OpenCardTwoHandle_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(OpenCardHandleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServer).OpenCardTwoHandle(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: User_OpenCardTwoHandle_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServer).OpenCardTwoHandle(ctx, req.(*OpenCardHandleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _User_CardStatusHandle_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CardStatusHandleRequest)
 	if err := dec(in); err != nil {
@@ -288,6 +336,24 @@ func _User_CardStatusHandle_Handler(srv interface{}, ctx context.Context, dec fu
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(UserServer).CardStatusHandle(ctx, req.(*CardStatusHandleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _User_CardStatusHandleTwo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CardStatusHandleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServer).CardStatusHandleTwo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: User_CardStatusHandleTwo_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServer).CardStatusHandleTwo(ctx, req.(*CardStatusHandleRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -502,8 +568,16 @@ var User_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _User_OpenCardHandle_Handler,
 		},
 		{
+			MethodName: "OpenCardTwoHandle",
+			Handler:    _User_OpenCardTwoHandle_Handler,
+		},
+		{
 			MethodName: "CardStatusHandle",
 			Handler:    _User_CardStatusHandle_Handler,
+		},
+		{
+			MethodName: "CardStatusHandleTwo",
+			Handler:    _User_CardStatusHandleTwo_Handler,
 		},
 		{
 			MethodName: "Deposit",

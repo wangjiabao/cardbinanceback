@@ -12,37 +12,42 @@ import (
 )
 
 type User struct {
-	ID            uint64    `gorm:"primarykey;type:int"`
-	Address       string    `gorm:"type:varchar(100);default:'no'"`
-	Card          string    `gorm:"type:varchar(100);not null;default:'no'"`
-	CardOrderId   string    `gorm:"type:varchar(100);not null;default:'no'"`
-	CardNumber    string    `gorm:"type:varchar(100);not null;default:'no'"`
-	CardAmount    float64   `gorm:"type:decimal(65,20);not null"`
-	Amount        float64   `gorm:"type:decimal(65,20)"`
-	IsDelete      uint64    `gorm:"type:int"`
-	Vip           uint64    `gorm:"type:int"`
-	MyTotalAmount uint64    `gorm:"type:bigint"`
-	AmountTwo     uint64    `gorm:"type:bigint"`
-	CardUserId    string    `gorm:"type:varchar(45);not null;default:'0'"`
-	FirstName     string    `gorm:"type:varchar(45);not null;default:'no'"`
-	LastName      string    `gorm:"type:varchar(45);not null;default:'no'"`
-	BirthDate     string    `gorm:"type:varchar(45);not null;default:'no'"`
-	Email         string    `gorm:"type:varchar(100);not null;default:'no'"`
-	CountryCode   string    `gorm:"type:varchar(45);not null;default:'no'"`
-	Phone         string    `gorm:"type:varchar(45);not null;default:'no'"`
-	City          string    `gorm:"type:varchar(100);not null;default:'no'"`
-	Country       string    `gorm:"type:varchar(100);not null;default:'no'"`
-	Street        string    `gorm:"type:varchar(100);not null;default:'no'"`
-	PostalCode    string    `gorm:"type:varchar(45);not null;default:'no'"`
-	MaxCardQuota  uint64    `gorm:"type:bigint"`
-	ProductId     string    `gorm:"type:varchar(45);not null;default:'0'"`
-	CreatedAt     time.Time `gorm:"type:datetime;not null"`
-	UpdatedAt     time.Time `gorm:"type:datetime;not null"`
-	VipTwo        uint64    `gorm:"type:int"`
-	VipThree      uint64    `gorm:"type:int"`
-	CardTwo       uint64    `gorm:"type:int"`
-	CanVip        uint64    `gorm:"type:int"`
-	UserCount     uint64    `gorm:"type:int"`
+	ID              uint64    `gorm:"primarykey;type:int"`
+	Address         string    `gorm:"type:varchar(100);default:'no'"`
+	Card            string    `gorm:"type:varchar(100);not null;default:'no'"`
+	CardOrderId     string    `gorm:"type:varchar(100);not null;default:'no'"`
+	CardNumber      string    `gorm:"type:varchar(100);not null;default:'no'"`
+	CardNumberTwo   string    `gorm:"type:varchar(100);not null;default:'no'"`
+	CardAmount      float64   `gorm:"type:decimal(65,20);not null"`
+	Amount          float64   `gorm:"type:decimal(65,20)"`
+	IsDelete        uint64    `gorm:"type:int"`
+	Vip             uint64    `gorm:"type:int"`
+	MyTotalAmount   uint64    `gorm:"type:bigint"`
+	AmountTwo       uint64    `gorm:"type:bigint"`
+	CardIdTwo       string    `gorm:"type:varchar(100);not null;default:'no'"`
+	CardUserId      string    `gorm:"type:varchar(45);not null;default:'0'"`
+	FirstName       string    `gorm:"type:varchar(45);not null;default:'no'"`
+	LastName        string    `gorm:"type:varchar(45);not null;default:'no'"`
+	BirthDate       string    `gorm:"type:varchar(45);not null;default:'no'"`
+	Email           string    `gorm:"type:varchar(100);not null;default:'no'"`
+	CountryCode     string    `gorm:"type:varchar(45);not null;default:'no'"`
+	Phone           string    `gorm:"type:varchar(45);not null;default:'no'"`
+	City            string    `gorm:"type:varchar(100);not null;default:'no'"`
+	Country         string    `gorm:"type:varchar(100);not null;default:'no'"`
+	Street          string    `gorm:"type:varchar(100);not null;default:'no'"`
+	PostalCode      string    `gorm:"type:varchar(45);not null;default:'no'"`
+	MaxCardQuota    uint64    `gorm:"type:bigint"`
+	MaxCardQuotaTwo uint64    `gorm:"type:bigint"`
+	ProductId       string    `gorm:"type:varchar(45);not null;default:'0'"`
+	ProductIdTwo    string    `gorm:"type:varchar(45);not null;default:'0'"`
+	CreatedAt       time.Time `gorm:"type:datetime;not null"`
+	UpdatedAt       time.Time `gorm:"type:datetime;not null"`
+	VipTwo          uint64    `gorm:"type:int"`
+	VipThree        uint64    `gorm:"type:int"`
+	CardTwo         uint64    `gorm:"type:int"`
+	CanVip          uint64    `gorm:"type:int"`
+	UserCount       uint64    `gorm:"type:int"`
+	CardType        uint64    `gorm:"type:int"`
 }
 
 type Admin struct {
@@ -549,6 +554,21 @@ func (u *UserRepo) UpdateCard(ctx context.Context, userId uint64, cardOrderId, c
 	return nil
 }
 
+// UpdateCardTwoNew .
+func (u *UserRepo) UpdateCardTwoNew(ctx context.Context, userId uint64, card string) error {
+	res := u.data.DB(ctx).Table("user").Where("id=?", userId).Where("card_two=?", 1).
+		Updates(map[string]interface{}{
+			"card_two":    2,
+			"card_id_two": card,
+			"updated_at":  time.Now().Format("2006-01-02 15:04:05"),
+		})
+	if res.Error != nil || 0 >= res.RowsAffected {
+		return errors.New(500, "UPDATE_USER_ERROR", "用户信息修改失败")
+	}
+
+	return nil
+}
+
 // UpdateCardNo .
 func (u *UserRepo) UpdateCardNo(ctx context.Context, userId uint64, amount float64) error {
 	res := u.data.DB(ctx).Table("user").Where("id=?", userId).
@@ -583,6 +603,20 @@ func (u *UserRepo) UpdateCardSucces(ctx context.Context, userId uint64, cardNum 
 		Updates(map[string]interface{}{
 			"card_number": cardNum,
 			"updated_at":  time.Now().Format("2006-01-02 15:04:05"),
+		})
+	if res.Error != nil || 0 >= res.RowsAffected {
+		return errors.New(500, "UPDATE_USER_ERROR", "用户信息修改失败")
+	}
+
+	return nil
+}
+
+// UpdateCardSuccessTwo .
+func (u *UserRepo) UpdateCardSuccessTwo(ctx context.Context, userId uint64) error {
+	res := u.data.DB(ctx).Table("user").Where("id=?", userId).
+		Updates(map[string]interface{}{
+			"card_two":   3,
+			"updated_at": time.Now().Format("2006-01-02 15:04:05"),
 		})
 	if res.Error != nil || 0 >= res.RowsAffected {
 		return errors.New(500, "UPDATE_USER_ERROR", "用户信息修改失败")
@@ -695,6 +729,59 @@ func (u *UserRepo) GetUsersOpenCard() ([]*biz.User, error) {
 	return res, nil
 }
 
+// GetUsersOpenCardTwo .
+func (u *UserRepo) GetUsersOpenCardTwo() ([]*biz.User, error) {
+	var users []*User
+
+	res := make([]*biz.User, 0)
+	if err := u.data.db.Table("user").Where("card_two=?", 1).Order("id asc").Find(&users).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return res, nil
+		}
+
+		return nil, errors.New(500, "USER ERROR", err.Error())
+	}
+
+	for _, user := range users {
+		res = append(res, &biz.User{
+			CardAmount:      user.CardAmount,
+			MyTotalAmount:   user.MyTotalAmount,
+			AmountTwo:       user.AmountTwo,
+			IsDelete:        user.IsDelete,
+			Vip:             user.Vip,
+			ID:              user.ID,
+			Address:         user.Address,
+			Card:            user.Card,
+			Amount:          user.Amount,
+			CreatedAt:       user.CreatedAt,
+			UpdatedAt:       user.UpdatedAt,
+			CardNumber:      user.CardNumber,
+			CardOrderId:     user.CardOrderId,
+			FirstName:       user.FirstName,
+			LastName:        user.LastName,
+			BirthDate:       user.BirthDate,
+			Email:           user.Email,
+			CountryCode:     user.CountryCode,
+			Phone:           user.Phone,
+			City:            user.City,
+			Country:         user.Country,
+			Street:          user.Street,
+			PostalCode:      user.PostalCode,
+			CardUserId:      user.CardUserId,
+			MaxCardQuota:    user.MaxCardQuota,
+			MaxCardQuotaTwo: user.MaxCardQuotaTwo,
+			ProductId:       user.ProductId,
+			ProductIdTwo:    user.ProductIdTwo,
+			CardNumberTwo:   user.CardNumberTwo,
+			VipTwo:          user.VipTwo,
+			CardTwo:         user.CardTwo,
+			CardType:        user.CardType,
+			CardIdTwo:       user.CardIdTwo,
+		})
+	}
+	return res, nil
+}
+
 // GetUsersOpenCardStatusDoing .
 func (u *UserRepo) GetUsersOpenCardStatusDoing() ([]*biz.User, error) {
 	var users []*User
@@ -742,6 +829,54 @@ func (u *UserRepo) GetUsersOpenCardStatusDoing() ([]*biz.User, error) {
 	return res, nil
 }
 
+// GetUsersOpenCardStatusDoingTwo .
+func (u *UserRepo) GetUsersOpenCardStatusDoingTwo() ([]*biz.User, error) {
+	var users []*User
+
+	res := make([]*biz.User, 0)
+	if err := u.data.db.Table("user").Where("card_two=?", 2).Order("id asc").Find(&users).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return res, nil
+		}
+
+		return nil, errors.New(500, "USER ERROR", err.Error())
+	}
+
+	for _, user := range users {
+		res = append(res, &biz.User{
+			CardAmount:    user.CardAmount,
+			MyTotalAmount: user.MyTotalAmount,
+			AmountTwo:     user.AmountTwo,
+			IsDelete:      user.IsDelete,
+			Vip:           user.Vip,
+			ID:            user.ID,
+			Address:       user.Address,
+			Card:          user.Card,
+			Amount:        user.Amount,
+			CreatedAt:     user.CreatedAt,
+			UpdatedAt:     user.UpdatedAt,
+			CardNumber:    user.CardNumber,
+			CardOrderId:   user.CardOrderId,
+			FirstName:     user.FirstName,
+			LastName:      user.LastName,
+			BirthDate:     user.BirthDate,
+			Email:         user.Email,
+			CountryCode:   user.CountryCode,
+			Phone:         user.Phone,
+			City:          user.City,
+			Country:       user.Country,
+			Street:        user.Street,
+			PostalCode:    user.PostalCode,
+			CardUserId:    user.CardUserId,
+			MaxCardQuota:  user.MaxCardQuota,
+			ProductId:     user.ProductId,
+			VipTwo:        user.VipTwo,
+			CardIdTwo:     user.CardIdTwo,
+		})
+	}
+	return res, nil
+}
+
 // GetWithdrawPassOrRewardedFirst .
 func (u *UserRepo) GetWithdrawPassOrRewardedFirst(ctx context.Context) (*biz.Withdraw, error) {
 	var withdraw *Withdraw
@@ -783,6 +918,33 @@ func (u *UserRepo) CreateCardRecommend(ctx context.Context, userId uint64, amoun
 	reward.Amount = amount
 	reward.One = vip
 	reward.Reason = 6 // 给我分红的理由
+	reward.Address = address
+	resInsert := u.data.DB(ctx).Table("reward").Create(&reward)
+	if resInsert.Error != nil || 0 >= resInsert.RowsAffected {
+		return errors.New(500, "CREATE_LOCATION_ERROR", "信息创建失败")
+	}
+
+	return nil
+}
+
+// CreateCardRecommendNew .
+func (u *UserRepo) CreateCardRecommendNew(ctx context.Context, userId uint64, amount float64, vip uint64, address string) error {
+	res := u.data.DB(ctx).Table("user").Where("id=?", userId).
+		Updates(map[string]interface{}{
+			"amount":     gorm.Expr("amount + ?", amount),
+			"updated_at": time.Now().Format("2006-01-02 15:04:05"),
+		})
+	if res.Error != nil || 0 >= res.RowsAffected {
+		return errors.New(500, "UPDATE_USER_ERROR", "用户信息修改失败")
+	}
+	var (
+		reward Reward
+	)
+
+	reward.UserId = userId
+	reward.Amount = amount
+	reward.One = vip
+	reward.Reason = 7 // 给我分红的理由
 	reward.Address = address
 	resInsert := u.data.DB(ctx).Table("reward").Create(&reward)
 	if resInsert.Error != nil || 0 >= resInsert.RowsAffected {

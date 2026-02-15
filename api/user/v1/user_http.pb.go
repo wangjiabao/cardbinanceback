@@ -26,8 +26,10 @@ const OperationUserAdminRewardList = "/api.user.v1.User/AdminRewardList"
 const OperationUserAdminUserList = "/api.user.v1.User/AdminUserList"
 const OperationUserAdminWithdrawEth = "/api.user.v1.User/AdminWithdrawEth"
 const OperationUserCardStatusHandle = "/api.user.v1.User/CardStatusHandle"
+const OperationUserCardStatusHandleTwo = "/api.user.v1.User/CardStatusHandleTwo"
 const OperationUserDeposit = "/api.user.v1.User/Deposit"
 const OperationUserOpenCardHandle = "/api.user.v1.User/OpenCardHandle"
+const OperationUserOpenCardTwoHandle = "/api.user.v1.User/OpenCardTwoHandle"
 const OperationUserRewardCardTwo = "/api.user.v1.User/RewardCardTwo"
 const OperationUserSetUserCount = "/api.user.v1.User/SetUserCount"
 const OperationUserSetVipThree = "/api.user.v1.User/SetVipThree"
@@ -41,9 +43,11 @@ type UserHTTPServer interface {
 	AdminUserList(context.Context, *AdminUserListRequest) (*AdminUserListReply, error)
 	AdminWithdrawEth(context.Context, *AdminWithdrawEthRequest) (*AdminWithdrawEthReply, error)
 	CardStatusHandle(context.Context, *CardStatusHandleRequest) (*CardStatusHandleReply, error)
+	CardStatusHandleTwo(context.Context, *CardStatusHandleRequest) (*CardStatusHandleReply, error)
 	Deposit(context.Context, *DepositRequest) (*DepositReply, error)
 	// OpenCardHandle 开卡
 	OpenCardHandle(context.Context, *OpenCardHandleRequest) (*OpenCardHandleReply, error)
+	OpenCardTwoHandle(context.Context, *OpenCardHandleRequest) (*OpenCardHandleReply, error)
 	RewardCardTwo(context.Context, *RewardCardTwoRequest) (*RewardCardTwoReply, error)
 	SetUserCount(context.Context, *SetUserCountRequest) (*SetUserCountReply, error)
 	SetVipThree(context.Context, *SetVipThreeRequest) (*SetVipThreeReply, error)
@@ -53,7 +57,9 @@ type UserHTTPServer interface {
 func RegisterUserHTTPServer(s *http.Server, srv UserHTTPServer) {
 	r := s.Route("/")
 	r.GET("/api/admin_dhb/open_card_handle", _User_OpenCardHandle0_HTTP_Handler(srv))
+	r.GET("/api/admin_dhb/open_card_handle_two", _User_OpenCardTwoHandle0_HTTP_Handler(srv))
 	r.GET("/api/admin_dhb/card_status_handle", _User_CardStatusHandle0_HTTP_Handler(srv))
+	r.GET("/api/admin_dhb/card_status_handle_two_new", _User_CardStatusHandleTwo0_HTTP_Handler(srv))
 	r.GET("/api/admin_dhb/deposit", _User_Deposit0_HTTP_Handler(srv))
 	r.GET("/api/admin_dhb/withdraw_eth", _User_AdminWithdrawEth0_HTTP_Handler(srv))
 	r.GET("/api/admin_dhb/reward_card_two", _User_RewardCardTwo0_HTTP_Handler(srv))
@@ -86,6 +92,25 @@ func _User_OpenCardHandle0_HTTP_Handler(srv UserHTTPServer) func(ctx http.Contex
 	}
 }
 
+func _User_OpenCardTwoHandle0_HTTP_Handler(srv UserHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in OpenCardHandleRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationUserOpenCardTwoHandle)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.OpenCardTwoHandle(ctx, req.(*OpenCardHandleRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*OpenCardHandleReply)
+		return ctx.Result(200, reply)
+	}
+}
+
 func _User_CardStatusHandle0_HTTP_Handler(srv UserHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in CardStatusHandleRequest
@@ -95,6 +120,25 @@ func _User_CardStatusHandle0_HTTP_Handler(srv UserHTTPServer) func(ctx http.Cont
 		http.SetOperation(ctx, OperationUserCardStatusHandle)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
 			return srv.CardStatusHandle(ctx, req.(*CardStatusHandleRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*CardStatusHandleReply)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _User_CardStatusHandleTwo0_HTTP_Handler(srv UserHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in CardStatusHandleRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationUserCardStatusHandleTwo)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.CardStatusHandleTwo(ctx, req.(*CardStatusHandleRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
@@ -337,8 +381,10 @@ type UserHTTPClient interface {
 	AdminUserList(ctx context.Context, req *AdminUserListRequest, opts ...http.CallOption) (rsp *AdminUserListReply, err error)
 	AdminWithdrawEth(ctx context.Context, req *AdminWithdrawEthRequest, opts ...http.CallOption) (rsp *AdminWithdrawEthReply, err error)
 	CardStatusHandle(ctx context.Context, req *CardStatusHandleRequest, opts ...http.CallOption) (rsp *CardStatusHandleReply, err error)
+	CardStatusHandleTwo(ctx context.Context, req *CardStatusHandleRequest, opts ...http.CallOption) (rsp *CardStatusHandleReply, err error)
 	Deposit(ctx context.Context, req *DepositRequest, opts ...http.CallOption) (rsp *DepositReply, err error)
 	OpenCardHandle(ctx context.Context, req *OpenCardHandleRequest, opts ...http.CallOption) (rsp *OpenCardHandleReply, err error)
+	OpenCardTwoHandle(ctx context.Context, req *OpenCardHandleRequest, opts ...http.CallOption) (rsp *OpenCardHandleReply, err error)
 	RewardCardTwo(ctx context.Context, req *RewardCardTwoRequest, opts ...http.CallOption) (rsp *RewardCardTwoReply, err error)
 	SetUserCount(ctx context.Context, req *SetUserCountRequest, opts ...http.CallOption) (rsp *SetUserCountReply, err error)
 	SetVipThree(ctx context.Context, req *SetVipThreeRequest, opts ...http.CallOption) (rsp *SetVipThreeReply, err error)
@@ -444,6 +490,19 @@ func (c *UserHTTPClientImpl) CardStatusHandle(ctx context.Context, in *CardStatu
 	return &out, err
 }
 
+func (c *UserHTTPClientImpl) CardStatusHandleTwo(ctx context.Context, in *CardStatusHandleRequest, opts ...http.CallOption) (*CardStatusHandleReply, error) {
+	var out CardStatusHandleReply
+	pattern := "/api/admin_dhb/card_status_handle_two_new"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationUserCardStatusHandleTwo))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, err
+}
+
 func (c *UserHTTPClientImpl) Deposit(ctx context.Context, in *DepositRequest, opts ...http.CallOption) (*DepositReply, error) {
 	var out DepositReply
 	pattern := "/api/admin_dhb/deposit"
@@ -462,6 +521,19 @@ func (c *UserHTTPClientImpl) OpenCardHandle(ctx context.Context, in *OpenCardHan
 	pattern := "/api/admin_dhb/open_card_handle"
 	path := binding.EncodeURL(pattern, in, true)
 	opts = append(opts, http.Operation(OperationUserOpenCardHandle))
+	opts = append(opts, http.PathTemplate(pattern))
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, err
+}
+
+func (c *UserHTTPClientImpl) OpenCardTwoHandle(ctx context.Context, in *OpenCardHandleRequest, opts ...http.CallOption) (*OpenCardHandleReply, error) {
+	var out OpenCardHandleReply
+	pattern := "/api/admin_dhb/open_card_handle_two"
+	path := binding.EncodeURL(pattern, in, true)
+	opts = append(opts, http.Operation(OperationUserOpenCardTwoHandle))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
 	if err != nil {

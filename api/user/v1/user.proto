@@ -16,9 +16,21 @@ service User {
 		};
 	};
 
+	rpc OpenCardTwoHandle (OpenCardHandleRequest) returns (OpenCardHandleReply) {
+		option (google.api.http) = {
+			get: "/api/admin_dhb/open_card_handle_two"
+		};
+	};
+
 	rpc CardStatusHandle (CardStatusHandleRequest) returns (CardStatusHandleReply) {
 		option (google.api.http) = {
 			get: "/api/admin_dhb/card_status_handle"
+		};
+	};
+
+	rpc CardStatusHandleTwo (CardStatusHandleRequest) returns (CardStatusHandleReply) {
+		option (google.api.http) = {
+			get: "/api/admin_dhb/card_status_handle_two_new"
 		};
 	};
 

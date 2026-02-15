@@ -54,6 +54,28 @@ func (u *UserService) OpenCardHandle(ctx context.Context, req *pb.OpenCardHandle
 	return nil, nil
 }
 
+func (u *UserService) OpenCardTwoHandle(ctx context.Context, req *pb.OpenCardHandleRequest) (*pb.OpenCardHandleReply, error) {
+	end := time.Now().UTC().Add(50 * time.Second)
+
+	var (
+		err error
+	)
+	for i := 1; i <= 10; i++ {
+		now := time.Now().UTC()
+		if end.Before(now) {
+			break
+		}
+
+		err = u.uuc.OpenCardTwoHandle(ctx)
+		if nil != err {
+			fmt.Println(err)
+		}
+		time.Sleep(5 * time.Second)
+	}
+
+	return nil, nil
+}
+
 func (u *UserService) CardStatusHandle(ctx context.Context, req *pb.CardStatusHandleRequest) (*pb.CardStatusHandleReply, error) {
 	end := time.Now().UTC().Add(50 * time.Second)
 
@@ -76,7 +98,7 @@ func (u *UserService) CardStatusHandle(ctx context.Context, req *pb.CardStatusHa
 	return nil, nil
 }
 
-func (u *UserService) RewardCardTwo(ctx context.Context, req *pb.RewardCardTwoRequest) (*pb.RewardCardTwoReply, error) {
+func (u *UserService) CardStatusHandleTwo(ctx context.Context, req *pb.CardStatusHandleRequest) (*pb.CardStatusHandleReply, error) {
 	end := time.Now().UTC().Add(50 * time.Second)
 
 	var (
@@ -88,12 +110,34 @@ func (u *UserService) RewardCardTwo(ctx context.Context, req *pb.RewardCardTwoRe
 			break
 		}
 
-		err = u.uuc.CardTwoStatusHandle(ctx)
+		err = u.uuc.CardStatusHandleTwo(ctx)
 		if nil != err {
 			fmt.Println(err)
 		}
 		time.Sleep(5 * time.Second)
 	}
+
+	return nil, nil
+}
+
+func (u *UserService) RewardCardTwo(ctx context.Context, req *pb.RewardCardTwoRequest) (*pb.RewardCardTwoReply, error) {
+	//end := time.Now().UTC().Add(50 * time.Second)
+	//
+	//var (
+	//	err error
+	//)
+	//for i := 1; i <= 10; i++ {
+	//	now := time.Now().UTC()
+	//	if end.Before(now) {
+	//		break
+	//	}
+	//
+	//	err = u.uuc.CardTwoStatusHandle(ctx)
+	//	if nil != err {
+	//		fmt.Println(err)
+	//	}
+	//	time.Sleep(5 * time.Second)
+	//}
 
 	return nil, nil
 }
