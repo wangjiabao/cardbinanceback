@@ -872,7 +872,7 @@ func (uuc *UserUseCase) CardStatusHandleTwo(ctx context.Context) error {
 			continue
 		}
 
-		if "ASSIGNED" == resCard.Data.CardStatus {
+		if "ACTIVE" == resCard.Data.CardStatus {
 			fmt.Println("开卡状态，激活：", resCard, user.ID)
 			if err = uuc.tx.ExecTx(ctx, func(ctx context.Context) error { // 事务
 				err = uuc.repo.UpdateCardSuccessTwo(ctx, user.ID)
@@ -886,7 +886,7 @@ func (uuc *UserUseCase) CardStatusHandleTwo(ctx context.Context) error {
 				continue
 			}
 		} else if "PENDING" == resCard.Data.CardStatus || "PROGRESS" == resCard.Data.CardStatus {
-			fmt.Println("开卡状态，待处理：", resCard, user.ID)
+			//fmt.Println("开卡状态，待处理：", resCard, user.ID)
 			continue
 		} else {
 			fmt.Println("开卡状态，失败：", resCard, user.ID)
