@@ -515,8 +515,6 @@ func (uuc *UserUseCase) OpenCardTwoHandle(ctx context.Context) error {
 			backAmount = float64(500)
 		} else if 3 == user.CardType {
 			backAmount = float64(1000)
-		} else {
-			continue
 		}
 
 		//var (
