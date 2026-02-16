@@ -710,7 +710,7 @@ func (uuc *UserUseCase) CardStatusHandle(ctx context.Context) error {
 				fmt.Println("err，开卡成功", err, user.ID)
 				continue
 			}
-		} else if "PENDING" == resCard.Data.CardStatus || "PROGRESS" == resCard.Data.CardStatus {
+		} else if "PENDING" == resCard.Data.CardStatus || "PROGRESSING" == resCard.Data.CardStatus {
 			fmt.Println("开卡状态，待处理：", resCard, user.ID)
 			continue
 		} else {
@@ -885,7 +885,7 @@ func (uuc *UserUseCase) CardStatusHandleTwo(ctx context.Context) error {
 				fmt.Println("err，开卡成功", err, user.ID)
 				continue
 			}
-		} else if "PENDING" == resCard.Data.CardStatus || "PROGRESS" == resCard.Data.CardStatus {
+		} else if "PENDING" == resCard.Data.CardStatus || "PROGRESSING" == resCard.Data.CardStatus {
 			//fmt.Println("开卡状态，待处理：", resCard, user.ID)
 			continue
 		} else {
@@ -1942,7 +1942,7 @@ func GetCardInfoRequestWithSign(cardId string) (*CardInfoResponse, error) {
 		return nil, fmt.Errorf("request failed: %s", string(body))
 	}
 
-	//fmt.Println("响应报文:", string(body))
+	fmt.Println("响应报文:", string(body))
 
 	var result CardInfoResponse
 	if err = json.Unmarshal(body, &result); err != nil {
